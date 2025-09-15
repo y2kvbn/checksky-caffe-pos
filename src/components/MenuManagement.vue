@@ -1,21 +1,29 @@
+
 <template>
   <div class="menu-management">
     <h2>菜單管理</h2>
+    
+    <!-- Category Filters -->
     <div class="categories">
       <button 
         v-for="category in categories" 
-        :key="category.id"
-        @click="selectedCategory = category.id"
-        :class="{ active: selectedCategory === category.id }"
+        :key="category"
+        @click="selectedCategory = category"
+        :class="{ active: selectedCategory === category }"
       >
-        {{ category.name }}
+        {{ category }}
       </button>
     </div>
+
+    <!-- Menu Items Grid -->
     <div class="menu-items">
-      <div class="add-item-card" @click="showAddItemModal = true">
+      <!-- Add New Item Card -->
+      <div class="add-item-card" @click="openModal()">
           <div class="plus-icon">+</div>
           <div>新增品項</div>
       </div>
+      
+      <!-- Menu Item Cards -->
       <div v-for="item in filteredItems" :key="item.id" class="menu-item-card">
         <img :src="item.image" :alt="item.name">
         <div class="item-details">
@@ -23,55 +31,106 @@
             <p>NT${{ item.price }}</p>
         </div>
         <div class="item-actions">
-            <button @click="editItem(item)">編輯</button>
-            <button @click="deleteItem(item.id)" class="delete-btn">刪除</button>
+            <button @click="openModal(item)">編輯</button>
+            <button @click="handleDeleteItem(item.id)" class="delete-btn">刪除</button>
         </div>
       </div>
     </div>
+
+    <!-- Add/Edit Modal -->
+    <div v-if="isModalOpen" class="modal-overlay" @click.self="closeModal">
+      <div class="modal-content">
+        <h3>{{ modalMode === 'add' ? '新增品項' : '編輯品項' }}</h3>
+        <form @submit.prevent="handleSubmit">
+          <div class="form-group">
+            <label for="name">名稱</label>
+            <input type="text" id="name" v-model="currentItem.name" required>
+          </div>
+          <div class="form-group">
+            <label for="category">分類</label>
+            <input type="text" id="category" v-model="currentItem.category" required>
+          </div>
+          <div class="form-group">
+            <label for="price">價格</label>
+            <input type="number" id="price" v-model.number="currentItem.price" required>
+          </div>
+          <div class="form-group">
+            <label for="image">圖片網址</label>
+            <input type="text" id="image" v-model="currentItem.image">
+          </div>
+          <div class="form-actions">
+            <button type="button" @click="closeModal">取消</button>
+            <button type="submit">{{ modalMode === 'add' ? '新增' : '儲存' }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useMenuStore } from '../stores/menu';
 
-const categories = ref([
-  { id: 1, name: '特色風味簡餐' },
-  { id: 2, name: '單品咖啡' },
-  { id: 3, name: '義式咖啡' },
-  { id: 4, name: '茶' },
-  { id: 5, name: '無咖啡因飲品' },
-  { id: 6, name: '甜點' },
-  { id: 7, name: '炸物' },
-]);
+// --- Pinia Store ---
+const menuStore = useMenuStore();
+const { items, categories } = storeToRefs(menuStore);
+const { addItem, updateItem, deleteItem } = menuStore;
 
-const items = ref([
-    { id: 1, categoryId: 1, name: '風味烤雞腿排', price: 280, image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1780&auto=format&fit=crop' },
-    { id: 2, categoryId: 1, name: '紅酒燉牛肉', price: 320, image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?q=80&w=1614&auto=format&fit=crop' },
-    { id: 3, categoryId: 2, name: '手沖肯亞', price: 180, image: 'https://images.unsplash.com/photo-1512568400610-62da2848a098?q=80&w=1587&auto=format&fit=crop' },
-    { id: 4, categoryId: 3, name: '經典拿鐵', price: 150, image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=1637&auto=format&fit=crop' },
-    { id: 5, categoryId: 6, name: '提拉米蘇', price: 120, image: 'https://images.unsplash.com/photo-1586985289906-406d13c33599?q=80&w=1587&auto=format&fit=crop' },
-]);
+// --- Component State ---
+const selectedCategory = ref('全部'); // Default to showing all items
+const isModalOpen = ref(false);
+const modalMode = ref('add'); // 'add' or 'edit'
+const currentItem = ref({});
 
-const selectedCategory = ref(1);
-const showAddItemModal = ref(false);
-
+// --- Computed Properties ---
 const filteredItems = computed(() => {
-  return items.value.filter(item => item.categoryId === selectedCategory.value);
+  if (selectedCategory.value === '全部') {
+    return items.value;
+  }
+  return items.value.filter(item => item.category === selectedCategory.value);
 });
 
-function editItem(item) {
-  // Logic to show an edit modal
-  console.log('Editing', item);
+// --- Modal Methods ---
+function openModal(item = null) {
+  if (item) {
+    // Edit mode
+    modalMode.value = 'edit';
+    currentItem.value = { ...item }; // Copy to avoid direct mutation
+  } else {
+    // Add mode
+    modalMode.value = 'add';
+    currentItem.value = { name: '', category: '', price: null, image: '' };
+  }
+  isModalOpen.value = true;
 }
 
-function deleteItem(itemId) {
-  // Logic to delete an item
-  console.log('Deleting', itemId);
-  items.value = items.value.filter(item => item.id !== itemId);
+function closeModal() {
+  isModalOpen.value = false;
+}
+
+// --- Form & Data Methods ---
+function handleSubmit() {
+  if (modalMode.value === 'add') {
+    addItem(currentItem.value);
+  } else {
+    updateItem(currentItem.value);
+  }
+  closeModal();
+}
+
+function handleDeleteItem(itemId) {
+    // Add a confirmation dialog for a better user experience
+    if (confirm('您確定要刪除這個品項嗎？')) {
+        deleteItem(itemId);
+    }
 }
 </script>
 
 <style scoped>
+/* Basic component styles remain the same */
 .menu-management {
     padding: 25px;
     color: #333;
@@ -186,5 +245,76 @@ function deleteItem(itemId) {
     background-color: #fff0f0;
     color: #dc3545;
     border-color: #f7d9d9;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-size: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.form-actions button {
+  padding: 10px 25px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.form-actions button[type="button"] {
+  background-color: #f0f0f0;
+}
+
+.form-actions button[type="submit"] {
+  background-color: #ffb997;
+  color: white;
 }
 </style>
