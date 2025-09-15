@@ -50,7 +50,7 @@
             <p>購物車是空的</p>
           </div>
           <div v-else class="cart-items">
-            <div class="cart-item" v-for="item in cart" :key="item.id">
+            <div class="cart-item" v-for="item in cart" :key="item.cartItemId">
                 <div class="item-info-cart">
                     <span class="item-name">{{ item.name }}</span>
                     <span class="item-price">NT${{ item.price }}</span>
@@ -92,6 +92,14 @@
             <button class="btn btn-secondary" @click="showCheckoutModal = false">取消</button>
         </div>
     </div>
+
+    <!-- Set Meal Configuration Modal -->
+    <SetMealModal 
+      :visible="isSetMealModalVisible" 
+      :set-meal="selectedSetMeal" 
+      @close="isSetMealModalVisible = false"
+      @confirm="handleSetMealConfirm"
+    />
   </div>
 </template>
 
@@ -100,7 +108,8 @@ import { ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useOrdersStore } from '../stores/orders';
 import { useMenuStore } from '../stores/menu';
-import { usePromotionsStore } from '../stores/promotions'; // Import the promotions store
+import { usePromotionsStore } from '../stores/promotions';
+import SetMealModal from './SetMealModal.vue'; // Import the new modal
 
 // --- Emits & Stores ---
 const emit = defineEmits(['setView']);
@@ -116,6 +125,9 @@ const { discountPercentage, giftThreshold, giftItemName } = storeToRefs(promotio
 const activeCategory = ref('特色風味小火鍋'); 
 const cart = ref([]);
 const showCheckoutModal = ref(false);
+const isSetMealModalVisible = ref(false);
+const selectedSetMeal = ref(null);
+let cartIdCounter = 0; // To generate unique IDs for cart items
 
 // --- Computed Properties ---
 const filteredMenu = computed(() => {
@@ -165,12 +177,28 @@ const total = computed(() => {
 
 // --- Cart Methods ---
 const addToCart = (item) => {
-  const existingItem = cart.value.find(cartItem => cartItem.id === item.id);
-  if (existingItem) {
-    existingItem.quantity++;
+  // If the item is a set meal, open the configuration modal
+  if (item.isSetMeal) {
+    selectedSetMeal.value = item;
+    isSetMealModalVisible.value = true;
   } else {
-    cart.value.push({ ...item, quantity: 1 });
+    // Standard item handling
+    const existingItem = cart.value.find(cartItem => cartItem.id === item.id);
+    if (existingItem) {
+      existingItem.quantity++;
+    } else {
+      cart.value.push({ ...item, quantity: 1, cartItemId: `cart-item-${cartIdCounter++}` });
+    }
   }
+};
+
+const handleSetMealConfirm = (mealPackage) => {
+  // Add each item from the configured meal package to the cart
+  mealPackage.forEach(item => {
+    // Give each item a unique cart ID to treat them as separate entries
+    cart.value.push({ ...item, quantity: 1, cartItemId: `cart-item-${cartIdCounter++}` });
+  });
+  isSetMealModalVisible.value = false;
 };
 
 const increaseQuantity = (item) => {
@@ -180,7 +208,8 @@ const increaseQuantity = (item) => {
 const decreaseQuantity = (item) => {
     item.quantity--;
     if (item.quantity === 0) {
-        cart.value = cart.value.filter(cartItem => cartItem.id !== item.id);
+        // Use the unique cartItemId to remove the correct item
+        cart.value = cart.value.filter(cartItem => cartItem.cartItemId !== item.cartItemId);
     }
 };
 

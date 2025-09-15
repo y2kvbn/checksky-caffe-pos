@@ -33,31 +33,46 @@ This project is a single-page web application for a coffee shop's administrative
 *   Displays key metrics: Total Settled Amount, Unsettled Amount, Total Orders.
 *   Shows a list of current orders (currently static).
 
-#### 2. Menu Management (Current Task)
-*   **View**: The main content area will display menu categories (特色風味簡餐, 單品咖啡, etc.).
-*   **Categories**: Each category will display a list of its items.
-*   **Items**: Each item will show a picture, name, and price.
-*   **Actions**: 
-    *   **Add**: Add a new item to a category.
-    *   **Edit**: Modify an existing item's picture, name, and price.
-    *   **Delete**: Remove an item from a category.
+#### 2. Point of Sale - Set Meal Logic (Current Task)
+*   **Applies to**: "特色風味小火鍋" & "特色風味簡餐" categories.
+*   **Standard Set Includes**:
+    *   1 bowl of White Rice.
+    *   1 standard Drink.
+*   **Standard Drinks**:
+    *   Iced/Hot Black Tea (冰/熱紅茶)
+    *   Iced/Hot Coffee (冰/熱咖啡)
+    *   Lactic Acid Drink (乳酸菌)
+*   **Ordering Flow**:
+    1.  Clicking a set meal item opens a configuration modal.
+    2.  Modal allows selection of one standard drink.
+    3.  Modal allows for upgrading to a non-standard drink with a NT$60 discount applied to the upgraded drink's price.
+    4.  Modal allows for adding extra bowls of rice for NT$10 each.
+*   **Order & Receipt Display**:
+    *   The order details (in the UI and on the printed receipt) must list each component of the set meal separately.
+    *   Example:
+        *   招牌總匯鍋
+        *   白飯 (附贈)
+        *   冰紅茶 (附贈)
+        *   額外加點白飯 (NT$10)
+        *   拿鐵 (更換飲品折抵NT$60)
 
-#### 3. Revenue Analysis (Planned)
-*   **View**: The main content area will display charts for revenue analysis.
-*   **Charts**: A line chart will be used to display revenue data.
-*   **Data**: The chart will show revenue for the last 7 days and the last 30 days by default.
+#### 3. Menu Management (Implemented)
+*   **View**: The main content area will display menu categories.
+*   **Items**: Each item shows a picture, name, and price.
+*   **Actions**: Add, Edit, Delete items.
 
-#### 4. Promotions (Planned)
-*   **View**: A section to create and manage promotional activities.
-*   **Promotion Types**:
-    1.  Discounted price for a single item.
-    2.  Gift with purchase (buy X, get Y).
-    3.  Discount on total order amount (spend X, get Y% off).
-*   **Actions**: Allow for creating, editing, activating, and deactivating promotions.
+#### 4. Revenue Analysis (Planned)
+*   **View**: Main content area will display charts for revenue analysis.
+*   **Data**: Line chart showing revenue for the last 7 and 30 days.
 
-#### 5. System Settings (Planned)
+#### 5. Promotions (Implemented)
+*   **View**: Section to create and manage promotional activities.
+*   **Types**: Item discounts, gift with purchase, order total discounts.
+*   **Actions**: Create, edit, activate, deactivate promotions.
+
+#### 6. System Settings (Implemented)
 *   **Login Management**: View login history.
-*   **Receipt Notes**: A text field to customize the message at the bottom of customer receipts.
-*   **Version Info**: Display the current application version (e.g., 1.0.0).
-*   **Support Contact**: Display customer support contact information.
+*   **Receipt Notes**: Customize receipt footer message.
+*   **Version Info**: Display app version.
+*   **Support Contact**: Display support info.
 
