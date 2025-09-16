@@ -52,7 +52,7 @@
     </div>
 
     <!-- Reservation Modal (for Add/Edit) -->
-    <div v-if="isModalVisible" class="modal-overlay" @click.self="closeModal">
+    <div v-if="isModalVisible" class="modal-overlay">
       <div class="modal-content">
         <h3 class="modal-title">{{ modalMode === 'add' ? '新增' : '編輯' }}訂位</h3>
         <form @submit.prevent="handleSubmit">
@@ -202,13 +202,17 @@ const confirmDelete = (reservationId) => {
 }
 
 .reservation-header {
+  position: relative;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 25px;
 }
 
 .date-navigation {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 15px;

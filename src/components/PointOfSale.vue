@@ -82,9 +82,6 @@
                   <p>&#127873; {{ spendAndGetMessage }} <span v-if="isGiftThresholdMet" class="gift-achieved">(已達成)</span></p>
               </div>
             </div>
-             <div class="summary-item receipt-notes">
-                <p><strong>備註:</strong> {{ receiptNotes }}</p>
-            </div>
             <div class="summary-total">
               <span>總計:</span>
               <span>NT${{ total }}</span>
@@ -543,7 +540,6 @@ const processOrder = (paymentMethod) => {
 .cart-summary {
     border-top: 2px solid var(--border-color);
     padding-top: 20px;
-    margin-top: auto;
 }
 
 .summary-item, .summary-total {
@@ -585,17 +581,5 @@ const processOrder = (paymentMethod) => {
 .btn-linepay { background-color: #00B900; color: white; }
 .btn-secondary { background-color: #a0aec0; color: white; width: 100%; }
 .gift-tag { color: #38a169; font-weight: bold; font-size: 12px; margin-left: 5px; }
-
-.receipt-notes {
-    font-size: 13px;
-    color: #555;
-    white-space: pre-wrap;
-    margin-top: 15px;
-}
-
-.receipt-notes strong {
-    display: block;
-    margin-bottom: 5px;
-}
 
 </style>
