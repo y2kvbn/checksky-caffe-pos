@@ -46,21 +46,23 @@
       <aside class="cart-sidebar">
         <div class="cart">
           <h2>我的購物車</h2>
-          <div v-if="cart.length === 0" class="cart-empty">
-            <p>購物車是空的</p>
-          </div>
-          <div v-else class="cart-items">
-            <div class="cart-item" v-for="item in cartWithPromotions" :key="item.cartItemId">
-                <div class="item-info-cart">
-                    <span class="item-name">{{ item.name }} <span v-if="item.isGift" class="gift-tag">[贈品]</span></span>
-                    <span class="item-price" :class="{ 'original-price': item.discountedPrice !== item.price }">NT${{ item.price }}</span>
-                     <span v-if="item.discountedPrice !== item.price" class="discounted-price">NT${{ item.discountedPrice }}</span>
-                </div>
-                <div class="item-quantity-controls">
-                    <button @click="decreaseQuantity(item)">-</button>
-                    <span>{{ item.quantity }}</span>
-                    <button @click="increaseQuantity(item)">+</button>
-                </div>
+          <div class="cart-body">
+            <div v-if="cart.length === 0" class="cart-empty">
+              <p>購物車是空的</p>
+            </div>
+            <div v-else class="cart-items">
+              <div class="cart-item" v-for="item in cartWithPromotions" :key="item.cartItemId">
+                  <div class="item-info-cart">
+                      <span class="item-name">{{ item.name }} <span v-if="item.isGift" class="gift-tag">[贈品]</span></span>
+                      <span class="item-price" :class="{ 'original-price': item.discountedPrice !== item.price }">NT${{ item.price }}</span>
+                       <span v-if="item.discountedPrice !== item.price" class="discounted-price">NT${{ item.discountedPrice }}</span>
+                  </div>
+                  <div class="item-quantity-controls">
+                      <button @click="decreaseQuantity(item)">-</button>
+                      <span>{{ item.quantity }}</span>
+                      <button @click="increaseQuantity(item)">+</button>
+                  </div>
+              </div>
             </div>
           </div>
           <div class="cart-summary">
@@ -460,6 +462,7 @@ const processOrder = (paymentMethod) => {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Added to contain children */
 }
 
 .cart h2 {
@@ -469,17 +472,21 @@ const processOrder = (paymentMethod) => {
   text-align: center;
 }
 
+.cart-body {
+  flex: 1; /* Magic: makes this container grow and shrink */
+  overflow-y: auto; /* Magic: adds scrollbar ONLY when needed */
+  padding-right: 5px;
+}
+
 .cart-empty {
-    flex-grow: 1;
+    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
     color: var(--text-light);
 }
 .cart-items {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding-right: 10px;
+   /* flex-grow, overflow, and padding removed from here */
 }
 
 .cart-item {
@@ -530,7 +537,7 @@ const processOrder = (paymentMethod) => {
 }
 
 .cart-summary {
-    margin-top: auto;
+    /* margin-top: auto; removed */
     border-top: 2px solid var(--border-color);
     padding-top: 20px;
 }

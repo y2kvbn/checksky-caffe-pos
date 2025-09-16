@@ -39,13 +39,22 @@
         </div>
       </div>
 
-      <button class="btn btn-primary" @click="savePromotions">儲存設定</button>
-      <p v-if="showSuccessMessage" class="success-message">優惠設定已更新！</p>
+      <button class="btn btn-primary" @click="savePromotions">儲存優惠</button>
+      <p v-if="showPromoSuccessMessage" class="success-message">優惠設定已更新！</p>
     </div>
 
-    <!-- 其他卡片... -->
+    <!-- 收據備註文字 -->
+    <div class="settings-card">
+        <h3><i class="fas fa-receipt"></i> 收據備註文字</h3>
+        <p>顯示於訂單收據最下方的文字欄位。</p>
+        <textarea v-model="localReceiptNotes" rows="4" placeholder="例如：感謝您的光臨，歡迎再次惠顧！"></textarea>
+        <button class="btn btn-primary" @click="saveReceiptNotes">儲存備註</button>
+        <p v-if="showNotesSuccessMessage" class="success-message">備註已更新！</p>
+    </div>
+
+    <!-- 登入管理 -->
      <div class="settings-card">
-      <h3>登入管理</h3>
+      <h3><i class="fas fa-history"></i> 登入管理</h3>
       <p>查詢最近的登入活動紀錄。</p>
       <div class="login-history">
         <table>
@@ -81,14 +90,9 @@
       </div>
     </div>
 
+    <!-- 關於 -->
     <div class="settings-card">
-        <h3>收據備註文字</h3>
-        <p>顯示於訂單收據最下方的文字欄位。</p>
-        <textarea v-model="receiptNotes" rows="3"></textarea>
-    </div>
-
-    <div class="settings-card">
-        <h3>關於</h3>
+        <h3><i class="fas fa-info-circle"></i> 關於</h3>
         <div class="about-section">
             <div class="about-item">
                 <strong>程式版本:</strong>
@@ -107,20 +111,26 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { usePromotionsStore } from '../stores/promotions';
+import { useSettingsStore } from '../stores/settings';
 
+// Stores
 const promotionsStore = usePromotionsStore();
+const settingsStore = useSettingsStore();
 
-// Local state for inputs, to be synced with the store
+// Local state for Promotions
 const localDiscount = ref(0);
 const localGiftThreshold = ref(0);
 const localGiftItemName = ref('');
-const showSuccessMessage = ref(false);
+const showPromoSuccessMessage = ref(false);
 
-// Sync local state with store on component mount
+// Local state for Receipt Notes
+const localReceiptNotes = ref('');
+const showNotesSuccessMessage = ref(false);
+
+
+// Sync local state with stores on component mount
 onMounted(() => {
-  // Correctly map store state to local state
-  // The store holds the final price percentage (e.g., 85 for 85折), 
-  // while the component model holds the discount percentage (e.g., 15 for 15% off).
+  // Sync Promotions
   if (promotionsStore.spendAndDiscount) {
       localDiscount.value = 100 - promotionsStore.spendAndDiscount.discount;
   }
@@ -128,27 +138,32 @@ onMounted(() => {
       localGiftThreshold.value = promotionsStore.spendAndGet.threshold;
       localGiftItemName.value = promotionsStore.spendAndGet.giftName;
   }
+  // Sync Receipt Notes
+  localReceiptNotes.value = settingsStore.receiptNotes;
 });
 
 const savePromotions = () => {
-  // Call the correct actions in the store
   promotionsStore.updateSpendAndDiscount({
-      // enabled and threshold are not on this form, so we only update the discount
       discount: 100 - localDiscount.value
   });
   promotionsStore.updateSpendAndGet({
-      // enabled is not on this form, so we only update what is
       threshold: localGiftThreshold.value,
       giftName: localGiftItemName.value
   });
 
-  showSuccessMessage.value = true;
+  showPromoSuccessMessage.value = true;
   setTimeout(() => {
-      showSuccessMessage.value = false;
+      showPromoSuccessMessage.value = false;
   }, 2000);
 };
 
-const receiptNotes = ref('沒有一來就有好吃的啦！請耐心等候^＿^ ');
+const saveReceiptNotes = () => {
+  settingsStore.updateReceiptNotes(localReceiptNotes.value);
+  showNotesSuccessMessage.value = true;
+  setTimeout(() => {
+    showNotesSuccessMessage.value = false;
+  }, 2000);
+};
 
 </script>
 
@@ -178,11 +193,13 @@ const receiptNotes = ref('沒有一來就有好吃的啦！請耐心等候^＿^ 
     display: flex;
     align-items: center;
     gap: 10px;
+    color: #333;
 }
 
 .settings-card p {
     margin: 0 0 20px 0;
     color: #666;
+    line-height: 1.5;
 }
 
 /* Promo specific styles */
@@ -270,6 +287,7 @@ const receiptNotes = ref('沒有一來就有好吃的啦！請耐心等候^＿^ 
   font-size: 16px;
   font-weight: bold;
   transition: all 0.3s ease;
+  margin-top: 10px; /* Added for spacing */
 }
 
 .btn-primary:hover {
@@ -318,6 +336,7 @@ textarea {
     border-radius: 8px;
     font-size: 16px;
     resize: vertical;
+    line-height: 1.6;
 }
 
 .about-section {
