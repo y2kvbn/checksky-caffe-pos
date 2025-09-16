@@ -1,8 +1,10 @@
 #!/bin/bash
-# 這是一個自動化的部署腳本，請直接在您的終端機中執行它。
+# This is the ultimate command, specifying the target, project, and token all at once.
 
-echo "🚀 開始部署您的網站到 Firebase..."
+echo "🚀 Attempting the ultimate deployment command..."
 
-firebase deploy --only hosting
+# We are being extra redundant by specifying the target, the project, and the token
+# to overcome the CLI's unstable behavior in this environment.
+firebase deploy --only hosting:app --project aicheck-squad --token "4/0AVGzR1AN2ptanedrBTT9Rscmw516e8wI7vO4HS5IpMOomrIRfZbX9Qp8JfPef4QDLDOcbQ"
 
-echo "✅ 部署完成！您的網站已成功發布！"
+echo "✅ Deployment process finished."

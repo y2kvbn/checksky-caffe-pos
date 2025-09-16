@@ -1,0 +1,6 @@
+{
+  "firebase_hosting": {
+    "deploymentHostingUrl": "https://aicheck-squad.web.app"
+  },
+  "cloud_run_deploy": {}
+}
