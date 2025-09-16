@@ -16,7 +16,7 @@
           <li :class="{ active: activeView === 'SystemSettings' }" @click="activeView = 'SystemSettings'"><a href="#"><span>&#9881;</span> 系統設定</a></li>
         </ul>
       </nav>
-      <button class="btn btn-tertiary"><span>&#8962;</span> 回到首頁</button>
+      <button class="btn btn-tertiary btn-logout" @click="handleLogout"><span>&#128682;</span> 登出</button>
     </aside>
     <main class="main-content">
       <Suspense>
@@ -32,7 +32,7 @@
 <script setup>
 import { ref, shallowRef, defineAsyncComponent } from 'vue';
 
-const emit = defineEmits(['setView']);
+const emit = defineEmits(['setView', 'logout']);
 
 const activeView = ref('DashboardHome');
 
@@ -43,6 +43,10 @@ const views = shallowRef({
   Promotions: defineAsyncComponent(() => import('./Promotions.vue')),
   SystemSettings: defineAsyncComponent(() => import('./SystemSettings.vue')),
 });
+
+const handleLogout = () => {
+  emit('logout');
+};
 </script>
 
 <style scoped>
@@ -156,7 +160,7 @@ const views = shallowRef({
     background-color: #f0f0f0;
 }
 
-.sidebar .btn-tertiary {
+.sidebar .btn-logout {
     margin-top: auto;
 }
 
@@ -200,7 +204,19 @@ const views = shallowRef({
 }
 
 .btn-tertiary:hover {
-    background-color: #f8f8f8;
+    background-color: #e2e6ea; /* A slightly darker hover for the logout button */
 }
+
+.btn-logout {
+  background-color: #f8d7da; /* A subtle red to indicate a destructive action */
+  color: #721c24; /* Dark red text */
+  border: 1px solid #f5c6cb;
+}
+
+.btn-logout:hover {
+    background-color: #f5c6cb;
+    border-color: #f1b0b7;
+}
+
 
 </style>

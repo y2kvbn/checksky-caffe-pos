@@ -3,7 +3,7 @@
     <div class="login-page">
       <!-- Left Side: Single Vertical Image -->
       <div class="login-gallery">
-        <img src="https://img.freepik.com/free-photo/fresh-coffee-steams-wooden-table-close-up-generative-ai_188544-8923.jpg" alt="Cafe Interior" class="gallery-image"/>
+        <img src="https://i.ibb.co/ZzPs8vXt/Artguru-text2image-20250916102830.png" alt="Cafe Staff" class="gallery-image"/>
       </div>
 
       <!-- Right Side: Form Container -->
@@ -233,6 +233,7 @@ const backToLogin = () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: right; /* Focuses on the right part of the image */
 }
 
 /* --- Form (Right side) --- */
