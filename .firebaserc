@@ -1,7 +1,5 @@
 {
   "projects": {
-    "y": "aicheck-squad"
-  },
-  "targets": {},
-  "etags": {}
+    "default": "aicheck-squad"
+  }
 }
