@@ -6,10 +6,11 @@ This project is a comprehensive Point of Sale (POS) and dashboard application fo
 
 ## Key Features
 
+- **User Authentication**: A secure and visually appealing login screen that serves as the entry point to the application. It validates user credentials and grants access to the main dashboard. It now includes a high-fidelity simulated **Password Reset** flow, allowing users to go through the process of entering a phone number, validating a mock SMS code, and setting a new password.
 - **Dashboard**: A central hub for monitoring key business metrics, including a revenue analysis chart, order status tracking, and quick access to promotional settings.
 - **Point of Sale (POS)**: An interactive interface for cashiers to place orders, manage the shopping cart, and process payments. It supports various promotion types, including single-item discounts, spend-and-get offers, and spend-and-get discounts.
 - **Promotions Management**: A dedicated section for configuring and enabling different promotional campaigns, which are dynamically reflected in the POS system.
-- **State Management**: Centralized state management powered by Pinia, ensuring data consistency across all components.
+- **State Management**: Centralized state management powered by Pinia for core application features and local component state for the login flow, ensuring data consistency across all components.
 
 ## Styling and Design
 
@@ -22,11 +23,22 @@ This project is a comprehensive Point of Sale (POS) and dashboard application fo
 
 ### Objective
 
-To fully integrate the promotion system with the Point of Sale (POS) component, ensuring that all three types of promotions—single-item discounts, spend-and-get offers, and spend-and-get discounts—are correctly applied to the shopping cart and reflected in the final order.
+To significantly enhance the login experience by implementing a simulated password reset feature, refining the layout and visual presentation, and improving user guidance text.
 
 ### Actionable Steps
 
-1.  **Update Pinia Store**: The `promotions.js` store has been updated to manage the state for all three promotion types, including their enabled status, thresholds, and discount values.
-2.  **Update Promotions Component**: The `Promotions.vue` component has been enhanced to allow users to configure and enable each promotion type. The UI is connected to the Pinia store to ensure that all changes are persisted.
-3.  **Integrate with POS**: The `PointOfSale.vue` component has been updated to apply the promotion logic to the shopping cart. The cart now dynamically updates to reflect single-item discounts, and the total calculation includes spend-and-get discounts. Spend-and-get gifts are also added to the final order upon checkout.
-4.  **Finalize and Verify**: The integration is now complete. The next step is to test the full checkout flow to ensure that all promotions are correctly applied and that the final order accurately reflects the applied discounts and gifts.
+1.  **Layout and Visual Redesign**: The `Login.vue` component's layout was updated. The three-image gallery on the left was replaced with a single, more immersive vertical image. This provides a cleaner and more focused aesthetic.
+
+2.  **Text and Link Updates**: 
+    - The "切換至 POS 後台" link was changed to **"聯繫客服"** and now functions as a `mailto:` link for customer support.
+    - The system recommendation text was updated to **"建議使用平板設備操作，以享最佳的顯示結果"** and moved directly below the login button for better contextual placement.
+
+3.  **Implement "Forgot Password" Flow**: 
+    - A complete, multi-step user flow was created for password recovery. This is managed by a new `viewState` variable within the component.
+    - The flow includes stages for: entering a phone number, entering a simulated 4-digit verification code, and setting/confirming a new password.
+
+4.  **Component Refactoring & State Management**: 
+    - The `Login.vue` component was heavily refactored to manage the different views (`login`, `forgotPassword`, `enterCode`, `resetPassword`, `success`) within a single file, making the logic clean and maintainable.
+    - A simulated user database object was created to allow the new password to be temporarily stored, enabling the user to log in with it during the same session.
+
+5.  **Finalize and Update Blueprint**: The project's `blueprint.md` has been updated to document the addition of the password reset functionality and the comprehensive redesign of the login component.
