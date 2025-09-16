@@ -1,0 +1,36 @@
+# This is a GitHub Actions workflow that will automatically deploy your site to Firebase Hosting.
+# It will trigger every time you push code to the 'main' branch.
+
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 3. Install Dependencies
+        run: npm install
+
+      - name: 4. Build Project
+        run: npm run build
+
+      - name: 5. Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}'
+          channelId: live
+          projectId: aicheck-squad
+          target: app
