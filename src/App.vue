@@ -1,6 +1,7 @@
 <template>
   <component 
     :is="activeComponent" 
+    v-bind="viewProps"
     @setView="setView" 
     @login-success="onLoginSuccess" 
     @logout="onLogout"
@@ -15,11 +16,10 @@ const Login = defineAsyncComponent(() => import('./components/Login.vue'));
 const Dashboard = defineAsyncComponent(() => import('./components/Dashboard.vue'));
 const PointOfSale = defineAsyncComponent(() => import('./components/PointOfSale.vue'));
 
-// State to track authentication status
+// State to track authentication status and view properties
 const isLoggedIn = ref(false);
-
-// Holds the currently active component (Login, Dashboard, or POS)
 const activeComponent = shallowRef(null);
+const viewProps = ref({}); // Holds props for the currently active component
 
 // Mapping of view names to component definitions
 const views = {
@@ -28,38 +28,38 @@ const views = {
 };
 
 /**
- * Handles view switching from within the Dashboard or other main components.
- * Ensures that only authenticated users can access protected views.
+ * Handles view switching from within components. It can also pass props (parameters)
+ * to the component being switched to.
  */
-const setView = (view) => {
+const setView = (view, params = {}) => {
   if (isLoggedIn.value && views[view]) {
     activeComponent.value = views[view];
+    viewProps.value = params; // Pass params as props to the component
   } else if (!isLoggedIn.value) {
     activeComponent.value = Login;
+    viewProps.value = {};
   }
 };
 
 /**
- * Called upon successful user authentication.
- * Updates the application state to reflect that the user is logged in
- * and switches the view to the main Dashboard.
+ * Called upon successful user authentication. Switches to the main Dashboard.
  */
 const onLoginSuccess = () => {
   isLoggedIn.value = true;
   activeComponent.value = Dashboard;
+  viewProps.value = {}; // Reset props
 };
 
 /**
- * Handles the logout process.
- * Resets the authentication state and returns the user to the Login screen.
+ * Handles the logout process. Returns to the Login screen.
  */
 const onLogout = () => {
   isLoggedIn.value = false;
   activeComponent.value = Login;
+  viewProps.value = {}; // Reset props
 };
 
 // onMounted lifecycle hook to set the initial component.
-// This ensures that on page load, we show the Login screen.
 onMounted(() => {
   if (!isLoggedIn.value) {
     activeComponent.value = Login;
@@ -75,9 +75,8 @@ onMounted(() => {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
-  /* Ensure the app container takes full viewport height, crucial for components like the login screen */
   height: 100vh;
-  background-color: #f0f2f5; /* A neutral background color that matches the login page */
+  background-color: #f0f2f5;
 }
 
 body {

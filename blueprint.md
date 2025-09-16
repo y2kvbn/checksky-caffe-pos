@@ -2,43 +2,42 @@
 
 ## Overview
 
-This project is a comprehensive Point of Sale (POS) and dashboard application for a café, built with Vue.js, Pinia, and Vite. It provides a seamless, intuitive interface for managing orders, tracking revenue, and configuring promotional activities. The application is designed to be responsive and user-friendly, ensuring a smooth experience on both desktop and mobile devices.
+This project is a comprehensive Point of Sale (POS) and dashboard application for a café, built with Vue.js, Pinia, and Vite. It provides a seamless, intuitive interface for managing orders, tracking revenue, configuring promotional activities, and handling customer reservations. The application is designed to be responsive and user-friendly, ensuring a smooth experience on both desktop and mobile devices.
 
 ## Key Features
 
-- **User Authentication**: A secure and visually appealing login screen that serves as the entry point to the application. It validates user credentials and grants access to the main dashboard. It now includes a high-fidelity simulated **Password Reset** flow, allowing users to go through the process of entering a phone number, validating a mock SMS code, and setting a new password.
-- **Dashboard**: A central hub for monitoring key business metrics, including a revenue analysis chart, order status tracking, and quick access to promotional settings.
-- **Point of Sale (POS)**: An interactive interface for cashiers to place orders, manage the shopping cart, and process payments. It supports various promotion types, including single-item discounts, spend-and-get offers, and spend-and-get discounts.
-- **Promotions Management**: A dedicated section for configuring and enabling different promotional campaigns, which are dynamically reflected in the POS system.
-- **State Management**: Centralized state management powered by Pinia for core application features and local component state for the login flow, ensuring data consistency across all components.
+- **User Authentication**: A secure login screen with a simulated password reset flow.
+- **Dashboard**: A central hub for monitoring key business metrics and providing quick access to all features.
+- **Point of Sale (POS)**: An interactive interface for placing orders and processing payments with integrated promotional logic.
+- **Reservation Management**: A completely redesigned, intuitive interface for managing customer reservations. The design prioritizes daily operations with a day-based navigation, a timeline view of bookings, and includes options for specific needs like baby chairs.
+- **Promotions Management**: A dedicated section for configuring various promotional campaigns.
+- **State Management**: Centralized state management powered by Pinia.
 
 ## Styling and Design
 
-- **Modern Aesthetics**: The application features a clean and modern design with a focus on visual balance, clear typography, and a vibrant color palette.
-- **Responsive Layout**: The UI is fully responsive and adapts to different screen sizes, providing an optimal experience on both desktop and mobile devices.
-- **Interactive Elements**: The application incorporates a range of interactive UI components, including animated charts, responsive buttons, and intuitive modals, to enhance the user experience.
-- **Visual Effects**: Subtle visual effects, such as drop shadows and glowing elements, are used to create a sense of depth and interactivity.
+- **Modern Aesthetics**: A clean and modern design with a focus on visual balance, clear typography, and a vibrant color palette.
+- **Responsive Layout**: A fully responsive UI that adapts to different screen sizes.
+- **Interactive Elements**: A rich set of interactive UI components, including animated charts, responsive buttons, and intuitive modals.
+- **Visual Effects**: Subtle visual effects like drop shadows and glowing elements to create depth and interactivity.
 
 ## Current Implementation Plan
 
 ### Objective
 
-To significantly enhance the login experience by implementing a simulated password reset feature, refining the layout and visual presentation, and improving user guidance text.
+To overhaul the reservation management interface based on user feedback, focusing on a day-centric workflow, better space utilization, and additional reservation options. This includes ensuring seamless navigation from the main dashboard.
 
 ### Actionable Steps
 
-1.  **Layout and Visual Redesign**: The `Login.vue` component's layout was updated. The three-image gallery on the left was replaced with a single, more immersive vertical image. This provides a cleaner and more focused aesthetic.
+1.  **Update Reservation Store**: The `src/stores/reservations.js` Pinia store will be updated. The data structure for a reservation will be augmented to include a `babyChairs` field to track requests for infant seating.
 
-2.  **Text and Link Updates**: 
-    - The "切換至 POS 後台" link was changed to **"聯繫客服"** and now functions as a `mailto:` link for customer support.
-    - The system recommendation text was updated to **"建議使用平板設備操作，以享最佳的顯示結果"** and moved directly below the login button for better contextual placement.
+2.  **Refactor `App.vue` and `PointOfSale.vue`**: To ensure the "訂位總覽" button on the dashboard navigates correctly, the view-switching logic will be refactored.
+    -   `App.vue` will be modified to pass parameters during view changes.
+    -   `PointOfSale.vue` will accept an initial view parameter to directly open the reservation screen when requested.
 
-3.  **Implement "Forgot Password" Flow**: 
-    - A complete, multi-step user flow was created for password recovery. This is managed by a new `viewState` variable within the component.
-    - The flow includes stages for: entering a phone number, entering a simulated 4-digit verification code, and setting/confirming a new password.
+3.  **Redesign `ReservationManagement.vue`**: The component will be completely rebuilt with a new layout and features:
+    -   **Layout**: The two-column layout will be replaced with a more integrated design. A small calendar will be used for quick date navigation, while the main area will feature a timeline or list view for the selected day's bookings.
+    -   **Navigation**: The primary navigation controls will be changed from month-based to day-based (e.g., "Previous Day" / "Next Day" buttons) for faster daily management.
+    -   **Feature Addition**: The add/edit reservation modal will be updated to include a field for specifying the number of baby chairs.
+    -   **Visuals**: The UI will be polished with a refined color scheme, improved typography, and a more intuitive layout to make booking information easier to read and manage.
 
-4.  **Component Refactoring & State Management**: 
-    - The `Login.vue` component was heavily refactored to manage the different views (`login`, `forgotPassword`, `enterCode`, `resetPassword`, `success`) within a single file, making the logic clean and maintainable.
-    - A simulated user database object was created to allow the new password to be temporarily stored, enabling the user to log in with it during the same session.
-
-5.  **Finalize and Update Blueprint**: The project's `blueprint.md` has been updated to document the addition of the password reset functionality and the comprehensive redesign of the login component.
+4.  **Update Blueprint**: The project's `blueprint.md` will be updated to reflect the new design and implementation details (This step is complete).

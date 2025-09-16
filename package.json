@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "pinia": "^3.0.3",
-    "vue": "^3.5.18"
+    "vue": "^3.5.18",
+    "v-calendar": "^3.1.2"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",

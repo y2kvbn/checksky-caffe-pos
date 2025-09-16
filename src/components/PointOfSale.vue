@@ -3,17 +3,18 @@
   <div class="pos-container">
     <!-- Header -->
     <header class="pos-header">
-      <button class="btn btn-outline" @click="$emit('setView', 'dashboard')"><span>&#128187;</span> 返回儀表板</button>
-      <h1 class="logo">向天泓咖啡廳</h1>
-      <div>
-        <button class="btn btn-outline"><span>&#128197;</span> 訂位總覽</button>
-        <button class="btn btn-outline"><span>&#8962;</span> 回到首頁</button>
-      </div>
+        <button class="btn btn-outline" @click="$emit('setView', 'dashboard')"><span>&#128187;</span> 返回儀表板</button>
+        <h1 class="logo">向天泓咖啡廳</h1>
+        <div>
+            <button class="btn btn-outline" @click="posView = 'reservations'" :class="{ active: posView === 'reservations' }"><span>&#128197;</span> 訂位總覽</button>
+            <button v-if="posView === 'reservations'" class="btn btn-outline" @click="posView = 'menu'"><span>&#127869;</span> 返回點餐</button>
+            <button v-else class="btn btn-outline" @click="posView = 'menu'" :class="{ active: posView === 'menu' }"><span>&#127869;</span> 點餐</button>
+        </div>
     </header>
     
-    <div class="pos-main">
-      <!-- Category Sidebar -->
-      <aside class="category-sidebar">
+    <div class="pos-main" :class="{ 'single-column-layout': posView === 'reservations' }">
+      <!-- Category Sidebar (shown only in menu view) -->
+      <aside class="category-sidebar" v-if="posView === 'menu'">
         <h2>分類</h2>
         <ul>
           <li 
@@ -27,23 +28,26 @@
         </ul>
       </aside>
       
-      <!-- Menu Grid -->
-      <main class="menu-grid">
-        <div class="menu-item-card" v-for="item in filteredMenu" :key="item.id">
-          <img :src="item.image" :alt="item.name" />
-          <div class="item-info">
-              <h3>{{ item.name }}</h3>
-              <p>{{ item.category }}</p>
-          </div>
-          <div class="item-actions">
-            <span class="price">NT${{ item.price }}</span>
-            <button class="btn btn-primary" @click="addToCart(item)"><span>&#8853;</span> 加入</button>
-          </div>
+      <!-- Main Content: Menu Grid or Reservation Management -->
+      <main class="main-content">
+        <div v-if="posView === 'menu'" class="menu-grid">
+            <div class="menu-item-card" v-for="item in filteredMenu" :key="item.id">
+                <img :src="item.image" :alt="item.name" />
+                <div class="item-info">
+                    <h3>{{ item.name }}</h3>
+                    <p>{{ item.category }}</p>
+                </div>
+                <div class="item-actions">
+                    <span class="price">NT${{ item.price }}</span>
+                    <button class="btn btn-primary" @click="addToCart(item)"><span>&#8853;</span> 加入</button>
+                </div>
+            </div>
         </div>
+        <ReservationManagement v-else />
       </main>
 
-      <!-- Cart Sidebar -->
-      <aside class="cart-sidebar">
+      <!-- Cart Sidebar (shown only in menu view) -->
+      <aside class="cart-sidebar" v-if="posView === 'menu'">
         <div class="cart">
           <h2>我的購物車</h2>
           <div class="cart-body">
@@ -77,6 +81,9 @@
               <div v-if="spendAndGetMessage" class="promo-message gift">
                   <p>&#127873; {{ spendAndGetMessage }} <span v-if="isGiftThresholdMet" class="gift-achieved">(已達成)</span></p>
               </div>
+            </div>
+             <div class="summary-item receipt-notes">
+                <p><strong>備註:</strong> {{ receiptNotes }}</p>
             </div>
             <div class="summary-total">
               <span>總計:</span>
@@ -116,19 +123,27 @@ import { storeToRefs } from 'pinia';
 import { useOrdersStore } from '../stores/orders';
 import { useMenuStore } from '../stores/menu';
 import { usePromotionsStore } from '../stores/promotions';
+import { useSettingsStore } from '../stores/settings';
 import SetMealModal from './SetMealModal.vue';
+import ReservationManagement from './ReservationManagement.vue';
 
-// --- Emits & Stores ---
+const props = defineProps({
+  view: {
+    type: String,
+    default: 'menu'
+  }
+});
 const emit = defineEmits(['setView']);
 const ordersStore = useOrdersStore();
 const menuStore = useMenuStore();
 const promotionsStore = usePromotionsStore();
+const settingsStore = useSettingsStore();
 
-// --- Store State & Getters ---
 const { items: menuItems, categories } = storeToRefs(menuStore);
 const { singleItemDeal, spendAndGet, spendAndDiscount } = storeToRefs(promotionsStore);
+const { receiptNotes } = storeToRefs(settingsStore);
 
-// --- Component State ---
+const posView = ref(props.view === 'reservations' ? 'reservations' : 'menu'); 
 const activeCategory = ref('特色風味小火鍋'); 
 const cart = ref([]);
 const showCheckoutModal = ref(false);
@@ -136,7 +151,6 @@ const isSetMealModalVisible = ref(false);
 const selectedSetMeal = ref(null);
 let cartIdCounter = 0;
 
-// --- Computed Properties ---
 const filteredMenu = computed(() => {
   if (activeCategory.value === '全部') {
     return menuItems.value.filter(item => item.inStock);
@@ -157,10 +171,9 @@ const subtotal = computed(() => {
 const cartWithPromotions = computed(() => {
     let processedCart = cart.value.map(item => ({
         ...item,
-        discountedPrice: item.price // Default to original price
+        discountedPrice: item.price
     }));
 
-    // 1. Apply single item discount
     if (singleItemDeal.value.enabled && singleItemDeal.value.itemId) {
         processedCart.forEach(item => {
             if (item.id === singleItemDeal.value.itemId) {
@@ -176,7 +189,6 @@ const cartSubtotalAfterSingleItemDiscount = computed(() => {
     return cartWithPromotions.value.reduce((sum, item) => sum + (item.discountedPrice * item.quantity), 0);
 });
 
-// 2. Spend & Discount Promotion
 const isDiscountThresholdMet = computed(() => {
     return spendAndDiscount.value.enabled && cartSubtotalAfterSingleItemDiscount.value >= spendAndDiscount.value.threshold;
 });
@@ -186,7 +198,6 @@ const spendAndDiscountMessage = computed(() => {
     return `滿${spendAndDiscount.value.threshold}元享${spendAndDiscount.value.discount}折優惠。`;
 });
 
-// 3. Spend & Get Promotion
 const isGiftThresholdMet = computed(() => {
     return spendAndGet.value.enabled && cartSubtotalAfterSingleItemDiscount.value >= spendAndGet.value.threshold;
 });
@@ -199,17 +210,14 @@ const spendAndGetMessage = computed(() => {
 const total = computed(() => {
   let finalTotal = cartSubtotalAfterSingleItemDiscount.value;
 
-  // Apply spend and discount if applicable
   if (isDiscountThresholdMet.value) {
-    const discountAmount = Math.round(finalTotal * (1 - spendAndDiscount.value.discount / 100));
-    finalTotal -= discountAmount;
+    const discountMultiplier = 1 - (spendAndDiscount.value.discount / 100);
+    finalTotal *= discountMultiplier;
   }
 
-  return finalTotal;
+  return Math.round(finalTotal);
 });
 
-
-// --- Cart Methods ---
 const addToCart = (item) => {
   if (item.isSetMeal) {
     selectedSetMeal.value = item;
@@ -226,7 +234,12 @@ const addToCart = (item) => {
 
 const handleSetMealConfirm = (mealPackage) => {
   mealPackage.forEach(item => {
-    cart.value.push({ ...item, quantity: 1, cartItemId: `cart-item-${cartIdCounter++}` });
+    const existingItem = cart.value.find(cartItem => cartItem.id === item.id);
+    if (existingItem) {
+      existingItem.quantity++;
+    } else {
+      cart.value.push({ ...item, quantity: 1, cartItemId: `cart-item-${cartIdCounter++}` });
+    }
   });
   isSetMealModalVisible.value = false;
 };
@@ -242,7 +255,6 @@ const decreaseQuantity = (item) => {
     }
 };
 
-// --- Checkout Methods ---
 const checkout = () => {
     if (cart.value.length > 0) {
         showCheckoutModal.value = true;
@@ -251,7 +263,6 @@ const checkout = () => {
 
 const processOrder = (paymentMethod) => {
     let finalCart = [...cartWithPromotions.value];
-
     let appliedPromotion = {
         singleItem: singleItemDeal.value.enabled ? `特定品項優惠` : '無',
         spendAndGet: '無',
@@ -259,14 +270,7 @@ const processOrder = (paymentMethod) => {
     };
 
     if (isGiftThresholdMet.value) {
-        finalCart.push({
-            name: spendAndGet.value.giftName,
-            price: 0,
-            discountedPrice: 0,
-            quantity: 1,
-            isGift: true,
-            cartItemId: `gift-${cartIdCounter++}`
-        });
+        finalCart.push({ name: spendAndGet.value.giftName, price: 0, isGift: true });
         appliedPromotion.spendAndGet = `滿額贈 ${spendAndGet.value.giftName}`;
     }
 
@@ -274,32 +278,46 @@ const processOrder = (paymentMethod) => {
         appliedPromotion.spendAndDiscount = `滿額${spendAndDiscount.value.discount}折`;
     }
 
-  const newOrder = {
-    items: JSON.parse(JSON.stringify(finalCart)),
-    subtotal: subtotal.value,
-    total: total.value,
-    paymentMethod: paymentMethod,
-    appliedPromotion: appliedPromotion
-  };
+    const newOrder = {
+        items: JSON.parse(JSON.stringify(finalCart)),
+        subtotal: subtotal.value,
+        total: total.value,
+        paymentMethod: paymentMethod,
+        appliedPromotion: appliedPromotion,
+        timestamp: new Date().toISOString(),
+        receiptNotes: receiptNotes.value
+    };
 
-  ordersStore.addOrder(newOrder);
-  cart.value = [];
-  showCheckoutModal.value = false;
-  emit('setView', 'dashboard');
+    ordersStore.addOrder(newOrder);
+    cart.value = [];
+    showCheckoutModal.value = false;
+    emit('setView', 'dashboard');
 };
 
 </script>
 
 <style scoped>
-:root {
-    --primary-color: #ff6b6b; 
-    --secondary-color: #ffb997;
-    --tertiary-color: #fff;
-    --text-dark: #333;
-    --text-light: #777;
-    --border-color: #eee;
-    --shadow-soft: 0 4px 12px rgba(0,0,0,0.05);
-    --shadow: 0 8px 24px rgba(0,0,0,0.1);
+
+.pos-main {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  flex-grow: 1;
+  overflow: hidden;
+  gap: 25px;
+  padding: 25px;
+}
+
+/* New style for single column layout */
+.pos-main.single-column-layout {
+  grid-template-columns: 1fr;
+}
+
+.main-content {
+  overflow-y: auto;
+}
+
+.single-column-layout > .main-content {
+    grid-column: 1 / -1;
 }
 
 .pos-container {
@@ -337,21 +355,13 @@ const processOrder = (paymentMethod) => {
     gap: 15px;
 }
 
-.pos-main {
-  display: grid;
-  grid-template-columns: 240px 1fr 300px;
-  flex-grow: 1;
-  overflow: hidden;
-  gap: 25px;
-  padding: 25px;
-}
-
 .category-sidebar {
   background-color: #fff;
   padding: 25px;
   border-radius: 12px;
   box-shadow: var(--shadow-soft);
   overflow-y: auto;
+  width: 240px;
 }
 
 .category-sidebar h2 {
@@ -361,7 +371,7 @@ const processOrder = (paymentMethod) => {
   margin-bottom: 25px;
 }
 
-.category-sidebar ul {
+.category-sidebar ul, .cart-items {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -390,10 +400,8 @@ const processOrder = (paymentMethod) => {
 
 .menu-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
-  overflow-y: auto;
-  padding: 5px;
   align-content: start;
 }
 
@@ -450,6 +458,7 @@ const processOrder = (paymentMethod) => {
 }
 
 .cart-sidebar {
+  width: 320px;
   display: flex;
   flex-direction: column;
 }
@@ -462,7 +471,7 @@ const processOrder = (paymentMethod) => {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Added to contain children */
+  overflow: hidden; 
 }
 
 .cart h2 {
@@ -473,9 +482,9 @@ const processOrder = (paymentMethod) => {
 }
 
 .cart-body {
-  flex: 1; /* Magic: makes this container grow and shrink */
-  overflow-y: auto; /* Magic: adds scrollbar ONLY when needed */
-  padding-right: 5px;
+  flex: 1; 
+  overflow-y: auto; 
+  padding-right: 10px;
 }
 
 .cart-empty {
@@ -484,9 +493,6 @@ const processOrder = (paymentMethod) => {
     justify-content: center;
     align-items: center;
     color: var(--text-light);
-}
-.cart-items {
-   /* flex-grow, overflow, and padding removed from here */
 }
 
 .cart-item {
@@ -532,14 +538,12 @@ const processOrder = (paymentMethod) => {
     transition: background-color 0.2s;
 }
 
-.item-quantity-controls button:hover {
-    background-color: #f0f0f0;
-}
+.item-quantity-controls button:hover { background-color: #f0f0f0; }
 
 .cart-summary {
-    /* margin-top: auto; removed */
     border-top: 2px solid var(--border-color);
     padding-top: 20px;
+    margin-top: auto;
 }
 
 .summary-item, .summary-total {
@@ -559,136 +563,39 @@ const processOrder = (paymentMethod) => {
     margin: 15px 0;
 }
 
-.promo-message {
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
-    font-size: 14px;
-    line-height: 1.5;
+.promo-message { padding: 10px; margin-bottom: 10px; border-radius: 5px; font-size: 14px; line-height: 1.5; }
+.promo-message.discount { background-color: #e6fffa; border-left: 4px solid #38b2ac; color: #2c5282; }
+.promo-message.gift { background-color: #fff5e6; border-left: 4px solid #f6ad55; color: #9c4221; }
+.gift-achieved { color: #38a169; font-weight: bold; margin-left: 5px; }
+
+.btn { padding: 10px 18px; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-primary { background-color: var(--primary-color); color: white; padding: 8px 16px; }
+.btn-primary span { font-size: 18px; }
+.btn-primary:hover { opacity: 0.9; transform: scale(1.05); }
+.btn-outline { background-color: transparent; color: #ff6b6b; border: 1px solid #ffb997; }
+.btn-outline:hover, .btn-outline.active { background-color: #ffb997; color: var(--text-dark); }
+.btn-confirm { width: 100%; padding: 16px; font-size: 18px; justify-content: center; background-color: var(--secondary-color); color: var(--text-dark); }
+.btn-confirm:hover { opacity: 0.9; }
+
+.checkout-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background-color: #fff; padding: 40px; border-radius: 15px; box-shadow: var(--shadow); text-align: center; }
+.modal-content h3 { margin-top: 0; font-size: 24px; }
+.payment-options { display: flex; gap: 20px; margin: 25px 0; }
+.btn-success { background-color: #48bb78; color: white; }
+.btn-linepay { background-color: #00B900; color: white; }
+.btn-secondary { background-color: #a0aec0; color: white; width: 100%; }
+.gift-tag { color: #38a169; font-weight: bold; font-size: 12px; margin-left: 5px; }
+
+.receipt-notes {
+    font-size: 13px;
+    color: #555;
+    white-space: pre-wrap;
+    margin-top: 15px;
 }
 
-.promo-message.discount {
-    background-color: #e6fffa;
-    border-left: 4px solid #38b2ac;
-    color: #2c5282;
-}
-
-.promo-message.gift {
-    background-color: #fff5e6;
-    border-left: 4px solid #f6ad55;
-    color: #9c4221;
-}
-
-.gift-achieved {
-    color: #38a169;
-    font-weight: bold;
-    margin-left: 5px;
-}
-
-.btn {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 8px 16px;
-}
-
-.btn-primary span {
-    font-size: 18px;
-}
-
-.btn-primary:hover {
-    opacity: 0.9;
-    transform: scale(1.05);
-}
-
-.btn-outline {
-    background-color: transparent;
-    color: #ff6b6b;
-    border: 1px solid #ffb997;
-}
-
-.btn-outline:hover {
-    background-color: #ffb997;
-    color: var(--text-dark);
-}
-
-.btn-confirm {
-  width: 100%;
-  padding: 16px;
-  font-size: 18px;
-  justify-content: center;
-  background-color: var(--secondary-color);
-  color: var(--text-dark);
-}
-
-.btn-confirm:hover {
-    opacity: 0.9;
-}
-
-.checkout-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-}
-
-.modal-content {
-    background-color: #fff;
-    padding: 40px;
-    border-radius: 15px;
-    box-shadow: var(--shadow);
-    text-align: center;
-}
-
-.modal-content h3 {
-    margin-top: 0;
-    font-size: 24px;
-}
-
-.payment-options {
-    display: flex;
-    gap: 20px;
-    margin: 25px 0;
-}
-
-.btn-success {
-    background-color: #48bb78;
-    color: white;
-}
-
-.btn-linepay {
-    background-color: #00B900;
-    color: white;
-}
-.btn-secondary {
-  background-color: #a0aec0;
-  color: white;
-  width: 100%;
-}
-
-.gift-tag {
-  color: #38a169;
-  font-weight: bold;
-  font-size: 12px;
-  margin-left: 5px;
+.receipt-notes strong {
+    display: block;
+    margin-bottom: 5px;
 }
 
 </style>

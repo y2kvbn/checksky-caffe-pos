@@ -3,7 +3,7 @@
     <div class="background-image"></div>
     <header class="header">
       <h1 class="logo">向天泓咖啡廳</h1>
-      <button class="btn btn-secondary"><span>&#128197;</span> 訂位總覽</button>
+      <button class="btn btn-secondary" @click="goToReservations"><span>&#128197;</span> 訂位總覽</button>
     </header>
     <aside class="sidebar">
       <h2 class="sidebar-title">店家儀表板</h2>
@@ -20,7 +20,7 @@
     </aside>
     <main class="main-content">
       <Suspense>
-        <component :is="views[activeView]" @setView="$emit('setView', $event)" />
+        <component :is="views[activeView]" @setView="handleSetView" />
         <template #fallback>
           <div>Loading...</div>
         </template>
@@ -46,6 +46,14 @@ const views = shallowRef({
 
 const handleLogout = () => {
   emit('logout');
+};
+
+const handleSetView = (view) => {
+    emit('setView', view);
+};
+
+const goToReservations = () => {
+  emit('setView', 'pos', { view: 'reservations' });
 };
 </script>
 
