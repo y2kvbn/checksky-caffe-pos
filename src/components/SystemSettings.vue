@@ -107,10 +107,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { usePromotionsStore } from '../stores/promotions';
-import { storeToRefs } from 'pinia';
 
 const promotionsStore = usePromotionsStore();
-const { discountPercentage, giftThreshold, giftItemName } = storeToRefs(promotionsStore);
 
 // Local state for inputs, to be synced with the store
 const localDiscount = ref(0);
@@ -120,17 +118,30 @@ const showSuccessMessage = ref(false);
 
 // Sync local state with store on component mount
 onMounted(() => {
-  localDiscount.value = discountPercentage.value;
-  localGiftThreshold.value = giftThreshold.value;
-  localGiftItemName.value = giftItemName.value;
+  // Correctly map store state to local state
+  // The store holds the final price percentage (e.g., 85 for 85折), 
+  // while the component model holds the discount percentage (e.g., 15 for 15% off).
+  if (promotionsStore.spendAndDiscount) {
+      localDiscount.value = 100 - promotionsStore.spendAndDiscount.discount;
+  }
+  if (promotionsStore.spendAndGet) {
+      localGiftThreshold.value = promotionsStore.spendAndGet.threshold;
+      localGiftItemName.value = promotionsStore.spendAndGet.giftName;
+  }
 });
 
 const savePromotions = () => {
-  promotionsStore.updatePromotions({
-    discountPercentage: localDiscount.value,
-    giftThreshold: localGiftThreshold.value,
-    giftItemName: localGiftItemName.value,
+  // Call the correct actions in the store
+  promotionsStore.updateSpendAndDiscount({
+      // enabled and threshold are not on this form, so we only update the discount
+      discount: 100 - localDiscount.value
   });
+  promotionsStore.updateSpendAndGet({
+      // enabled is not on this form, so we only update what is
+      threshold: localGiftThreshold.value,
+      giftName: localGiftItemName.value
+  });
+
   showSuccessMessage.value = true;
   setTimeout(() => {
       showSuccessMessage.value = false;
@@ -142,7 +153,6 @@ const receiptNotes = ref('沒有一來就有好吃的啦！請耐心等候^＿^ 
 </script>
 
 <style scoped>
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css');
 
 .system-settings h2 {
   font-size: 28px;

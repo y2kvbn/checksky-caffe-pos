@@ -50,10 +50,11 @@
             <p>購物車是空的</p>
           </div>
           <div v-else class="cart-items">
-            <div class="cart-item" v-for="item in cart" :key="item.cartItemId">
+            <div class="cart-item" v-for="item in cartWithPromotions" :key="item.cartItemId">
                 <div class="item-info-cart">
-                    <span class="item-name">{{ item.name }}</span>
-                    <span class="item-price">NT${{ item.price }}</span>
+                    <span class="item-name">{{ item.name }} <span v-if="item.isGift" class="gift-tag">[贈品]</span></span>
+                    <span class="item-price" :class="{ 'original-price': item.discountedPrice !== item.price }">NT${{ item.price }}</span>
+                     <span v-if="item.discountedPrice !== item.price" class="discounted-price">NT${{ item.discountedPrice }}</span>
                 </div>
                 <div class="item-quantity-controls">
                     <button @click="decreaseQuantity(item)">-</button>
@@ -67,9 +68,13 @@
               <span>小計:</span>
               <span>NT${{ subtotal }}</span>
             </div>
-            <div v-if="promotionsEnabled" class="promo-message">
-              <p>&#127881; {{ discountMessage }}</p>
-              <p>{{ giftMessage }} <span v-if="isGiftThresholdMet" class="gift-achieved">(已達成)</span></p>
+            <div class="promo-messages-container">
+              <div v-if="spendAndDiscountMessage" class="promo-message discount">
+                  <p>&#127881; {{ spendAndDiscountMessage }}</p>
+              </div>
+              <div v-if="spendAndGetMessage" class="promo-message gift">
+                  <p>&#127873; {{ spendAndGetMessage }} <span v-if="isGiftThresholdMet" class="gift-achieved">(已達成)</span></p>
+              </div>
             </div>
             <div class="summary-total">
               <span>總計:</span>
@@ -109,7 +114,7 @@ import { storeToRefs } from 'pinia';
 import { useOrdersStore } from '../stores/orders';
 import { useMenuStore } from '../stores/menu';
 import { usePromotionsStore } from '../stores/promotions';
-import SetMealModal from './SetMealModal.vue'; // Import the new modal
+import SetMealModal from './SetMealModal.vue';
 
 // --- Emits & Stores ---
 const emit = defineEmits(['setView']);
@@ -119,7 +124,7 @@ const promotionsStore = usePromotionsStore();
 
 // --- Store State & Getters ---
 const { items: menuItems, categories } = storeToRefs(menuStore);
-const { discountPercentage, giftThreshold, giftItemName } = storeToRefs(promotionsStore);
+const { singleItemDeal, spendAndGet, spendAndDiscount } = storeToRefs(promotionsStore);
 
 // --- Component State ---
 const activeCategory = ref('特色風味小火鍋'); 
@@ -127,7 +132,7 @@ const cart = ref([]);
 const showCheckoutModal = ref(false);
 const isSetMealModalVisible = ref(false);
 const selectedSetMeal = ref(null);
-let cartIdCounter = 0; // To generate unique IDs for cart items
+let cartIdCounter = 0;
 
 // --- Computed Properties ---
 const filteredMenu = computed(() => {
@@ -139,7 +144,7 @@ const filteredMenu = computed(() => {
 
 watch(categories, (newCategories) => {
   if (newCategories && newCategories.length > 1 && !newCategories.includes(activeCategory.value)) {
-      activeCategory.value = newCategories[1]; // Set to the first real category
+      activeCategory.value = newCategories[1];
   }
 }, { immediate: true });
 
@@ -147,42 +152,67 @@ const subtotal = computed(() => {
   return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 });
 
-// --- Dynamic Promotions ---
-const promotionsEnabled = computed(() => discountPercentage.value > 0 || giftThreshold.value > 0);
+const cartWithPromotions = computed(() => {
+    let processedCart = cart.value.map(item => ({
+        ...item,
+        discountedPrice: item.price // Default to original price
+    }));
 
-const discountMessage = computed(() => {
-    if (discountPercentage.value > 0) {
-        return `全品項${100 - discountPercentage.value}折優惠實施中！`;
+    // 1. Apply single item discount
+    if (singleItemDeal.value.enabled && singleItemDeal.value.itemId) {
+        processedCart.forEach(item => {
+            if (item.id === singleItemDeal.value.itemId) {
+                item.discountedPrice = singleItemDeal.value.discountPrice;
+            }
+        });
     }
-    return '暫無折扣活動';
+    
+    return processedCart;
 });
 
+const cartSubtotalAfterSingleItemDiscount = computed(() => {
+    return cartWithPromotions.value.reduce((sum, item) => sum + (item.discountedPrice * item.quantity), 0);
+});
+
+// 2. Spend & Discount Promotion
+const isDiscountThresholdMet = computed(() => {
+    return spendAndDiscount.value.enabled && cartSubtotalAfterSingleItemDiscount.value >= spendAndDiscount.value.threshold;
+});
+
+const spendAndDiscountMessage = computed(() => {
+    if (!spendAndDiscount.value.enabled) return '';
+    return `滿${spendAndDiscount.value.threshold}元享${spendAndDiscount.value.discount}折優惠。`;
+});
+
+// 3. Spend & Get Promotion
 const isGiftThresholdMet = computed(() => {
-    return giftThreshold.value > 0 && subtotal.value >= giftThreshold.value;
+    return spendAndGet.value.enabled && cartSubtotalAfterSingleItemDiscount.value >= spendAndGet.value.threshold;
 });
 
-const giftMessage = computed(() => {
-    if (giftThreshold.value > 0 && giftItemName.value) {
-        return `滿${giftThreshold.value}元再送${giftItemName.value}一份！`;
-    }
-    return '暫無滿額贈活動';
+const spendAndGetMessage = computed(() => {
+    if (!spendAndGet.value.enabled) return '';
+    return `滿${spendAndGet.value.threshold}元贈送${spendAndGet.value.giftName}。`;
 });
-
 
 const total = computed(() => {
-  const discount = 1 - (discountPercentage.value / 100);
-  const finalTotal = subtotal.value * discount;
-  return Math.round(finalTotal);
+  let finalTotal = cartSubtotalAfterSingleItemDiscount.value;
+
+  // Apply spend and discount if applicable
+  if (isDiscountThresholdMet.value) {
+    const discountAmount = Math.round(finalTotal * (1 - spendAndDiscount.value.discount / 100));
+    finalTotal -= discountAmount;
+  }
+
+  return finalTotal;
 });
+
 
 // --- Cart Methods ---
 const addToCart = (item) => {
-  // If the item is a set meal, open the configuration modal
   if (item.isSetMeal) {
     selectedSetMeal.value = item;
     isSetMealModalVisible.value = true;
   } else {
-    // Standard item handling
     const existingItem = cart.value.find(cartItem => cartItem.id === item.id);
     if (existingItem) {
       existingItem.quantity++;
@@ -193,9 +223,7 @@ const addToCart = (item) => {
 };
 
 const handleSetMealConfirm = (mealPackage) => {
-  // Add each item from the configured meal package to the cart
   mealPackage.forEach(item => {
-    // Give each item a unique cart ID to treat them as separate entries
     cart.value.push({ ...item, quantity: 1, cartItemId: `cart-item-${cartIdCounter++}` });
   });
   isSetMealModalVisible.value = false;
@@ -208,7 +236,6 @@ const increaseQuantity = (item) => {
 const decreaseQuantity = (item) => {
     item.quantity--;
     if (item.quantity === 0) {
-        // Use the unique cartItemId to remove the correct item
         cart.value = cart.value.filter(cartItem => cartItem.cartItemId !== item.cartItemId);
     }
 };
@@ -221,15 +248,36 @@ const checkout = () => {
 };
 
 const processOrder = (paymentMethod) => {
+    let finalCart = [...cartWithPromotions.value];
+
+    let appliedPromotion = {
+        singleItem: singleItemDeal.value.enabled ? `特定品項優惠` : '無',
+        spendAndGet: '無',
+        spendAndDiscount: '無',
+    };
+
+    if (isGiftThresholdMet.value) {
+        finalCart.push({
+            name: spendAndGet.value.giftName,
+            price: 0,
+            discountedPrice: 0,
+            quantity: 1,
+            isGift: true,
+            cartItemId: `gift-${cartIdCounter++}`
+        });
+        appliedPromotion.spendAndGet = `滿額贈 ${spendAndGet.value.giftName}`;
+    }
+
+    if (isDiscountThresholdMet.value) {
+        appliedPromotion.spendAndDiscount = `滿額${spendAndDiscount.value.discount}折`;
+    }
+
   const newOrder = {
-    items: JSON.parse(JSON.stringify(cart.value)),
+    items: JSON.parse(JSON.stringify(finalCart)),
     subtotal: subtotal.value,
     total: total.value,
     paymentMethod: paymentMethod,
-    appliedPromotion: {
-        discount: `${discountPercentage.value}% OFF`,
-        gift: isGiftThresholdMet.value ? `送 ${giftItemName.value}` : '無' 
-    }
+    appliedPromotion: appliedPromotion
   };
 
   ordersStore.addOrder(newOrder);
@@ -289,7 +337,7 @@ const processOrder = (paymentMethod) => {
 
 .pos-main {
   display: grid;
-  grid-template-columns: 240px 1fr 300px; /* Cart width reduced */
+  grid-template-columns: 240px 1fr 300px;
   flex-grow: 1;
   overflow: hidden;
   gap: 25px;
@@ -344,7 +392,7 @@ const processOrder = (paymentMethod) => {
   gap: 20px;
   overflow-y: auto;
   padding: 5px;
-  align-content: start; /* Prevent stretching */
+  align-content: start;
 }
 
 .menu-item-card {
@@ -364,7 +412,7 @@ const processOrder = (paymentMethod) => {
 
 .menu-item-card img {
   width: 100%;
-  height: 120px; /* Image height reduced */
+  height: 120px;
   object-fit: cover;
 }
 
@@ -373,14 +421,14 @@ const processOrder = (paymentMethod) => {
 }
 
 .item-info h3 {
-  font-size: 16px; /* Slightly reduced font size */
+  font-size: 16px;
   margin: 0 0 5px 0;
   color: var(--text-dark);
   font-weight: 600;
 }
 
 .item-info p {
-    font-size: 13px; /* Slightly reduced font size */
+    font-size: 13px;
     color: var(--text-light);
     margin: 0;
 }
@@ -394,7 +442,7 @@ const processOrder = (paymentMethod) => {
 }
 
 .item-actions .price {
-  font-size: 18px; /* Slightly reduced font size */
+  font-size: 18px;
   font-weight: bold;
   color: var(--text-dark);
 }
@@ -447,10 +495,17 @@ const processOrder = (paymentMethod) => {
     font-size: 16px;
 }
 
-.item-info-cart .item-price {
+.item-info-cart .original-price {
+    text-decoration: line-through;
     color: var(--text-light);
     font-size: 14px;
     margin-left: 10px;
+}
+.item-info-cart .discounted-price {
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 16px;
+    margin-left: 8px;
 }
 
 .item-quantity-controls {
@@ -493,18 +548,28 @@ const processOrder = (paymentMethod) => {
     color: var(--text-dark);
 }
 
-.promo-message {
-    background-color: #e6fffa;
-    border-left: 4px solid #38b2ac;
-    padding: 12px;
-    margin: 20px 0;
-    color: #2c5282;
-    font-size: 14px;
-    line-height: 1.6;
+.promo-messages-container {
+    margin: 15px 0;
 }
 
-.promo-message p {
-    margin: 5px 0;
+.promo-message {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.promo-message.discount {
+    background-color: #e6fffa;
+    border-left: 4px solid #38b2ac;
+    color: #2c5282;
+}
+
+.promo-message.gift {
+    background-color: #fff5e6;
+    border-left: 4px solid #f6ad55;
+    color: #9c4221;
 }
 
 .gift-achieved {
@@ -611,4 +676,12 @@ const processOrder = (paymentMethod) => {
   color: white;
   width: 100%;
 }
+
+.gift-tag {
+  color: #38a169;
+  font-weight: bold;
+  font-size: 12px;
+  margin-left: 5px;
+}
+
 </style>

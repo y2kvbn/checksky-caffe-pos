@@ -7,20 +7,20 @@
         <div class="card-header">
           <h3>單項優惠價</h3>
           <label class="switch">
-            <input type="checkbox" v-model="singleItemDiscount.enabled">
+            <input type="checkbox" v-model="singleItemDeal.enabled" @change="updateSingleItemDeal(singleItemDeal)">
             <span class="slider round"></span>
           </label>
         </div>
         <div class="card-body">
           <p>設定特定品項的優惠價格。</p>
-          <div v-if="singleItemDiscount.enabled" class="settings">
-            <select v-model="singleItemDiscount.itemId">
+          <div v-if="singleItemDeal.enabled" class="settings">
+            <select v-model="singleItemDeal.itemId" @change="updateSingleItemDeal(singleItemDeal)">
               <option disabled value="">請選擇品項</option>
-              <option value="1">風味烤雞腿排</option>
-              <option value="2">紅酒燉牛肉</option>
-              <option value="3">手沖肯亞</option>
+              <option v-for="item in menuStore.items" :key="item.id" :value="item.id">
+                {{ item.name }} - NT${{ item.price }}
+              </option>
             </select>
-            <input type="number" placeholder="優惠價格" v-model.number="singleItemDiscount.price">
+            <input type="number" placeholder="優惠價格" v-model.number="singleItemDeal.discountPrice" @input="updateSingleItemDeal(singleItemDeal)">
           </div>
         </div>
       </div>
@@ -30,15 +30,15 @@
         <div class="card-header">
           <h3>滿額贈送</h3>
           <label class="switch">
-            <input type="checkbox" v-model="giftWithPurchase.enabled">
+            <input type="checkbox" v-model="spendAndGet.enabled" @change="updateSpendAndGet(spendAndGet)">
             <span class="slider round"></span>
           </label>
         </div>
         <div class="card-body">
           <p>消費滿額即可獲得贈品。</p>
-          <div v-if="giftWithPurchase.enabled" class="settings">
-            <input type="number" placeholder="消費門檻" v-model.number="giftWithPurchase.threshold">
-            <input type="text" placeholder="贈品名稱" v-model="giftWithPurchase.gift">
+          <div v-if="spendAndGet.enabled" class="settings">
+            <input type="number" placeholder="消費門檻" v-model.number="spendAndGet.threshold" @input="updateSpendAndGet(spendAndGet)">
+            <input type="text" placeholder="贈品名稱" v-model="spendAndGet.giftName" @input="updateSpendAndGet(spendAndGet)">
           </div>
         </div>
       </div>
@@ -48,15 +48,15 @@
         <div class="card-header">
           <h3>滿額打折</h3>
           <label class="switch">
-            <input type="checkbox" v-model="percentageDiscount.enabled">
+            <input type="checkbox" v-model="spendAndDiscount.enabled" @change="updateSpendAndDiscount(spendAndDiscount)">
             <span class="slider round"></span>
           </label>
         </div>
         <div class="card-body">
           <p>消費滿額即可享有折扣。</p>
-          <div v-if="percentageDiscount.enabled" class="settings">
-            <input type="number" placeholder="消費門檻" v-model.number="percentageDiscount.threshold">
-            <input type="number" placeholder="折扣百分比(例如: 10%)" v-model.number="percentageDiscount.percentage">
+          <div v-if="spendAndDiscount.enabled" class="settings">
+            <input type="number" placeholder="消費門檻" v-model.number="spendAndDiscount.threshold" @input="updateSpendAndDiscount(spendAndDiscount)">
+            <input type="number" placeholder="折扣(例如: 85折請輸入85)" v-model.number="spendAndDiscount.discount" @input="updateSpendAndDiscount(spendAndDiscount)">
           </div>
         </div>
       </div>
@@ -65,25 +65,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { usePromotionsStore } from '@/stores/promotions.js';
+import { useMenuStore } from '@/stores/menu.js';
+import { storeToRefs } from 'pinia';
 
-const singleItemDiscount = ref({
-  enabled: false,
-  itemId: '',
-  price: null
-});
+const promotionsStore = usePromotionsStore();
+const { singleItemDeal, spendAndGet, spendAndDiscount } = storeToRefs(promotionsStore);
+const { updateSingleItemDeal, updateSpendAndGet, updateSpendAndDiscount } = promotionsStore;
 
-const giftWithPurchase = ref({
-  enabled: false,
-  threshold: null,
-  gift: ''
-});
+const menuStore = useMenuStore();
 
-const percentageDiscount = ref({
-  enabled: false,
-  threshold: null,
-  percentage: null
-});
 </script>
 
 <style scoped>

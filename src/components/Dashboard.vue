@@ -80,6 +80,10 @@ const views = shallowRef({
   position: relative;
 }
 
+.sidebar {
+    z-index: 3;
+}
+
 .header {
   grid-area: header;
   display: flex;

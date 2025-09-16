@@ -1,78 +1,32 @@
-
 # Project Blueprint
 
 ## Overview
 
-This project is a single-page web application for a coffee shop's administrative dashboard, designed for tablet devices. It provides a summary of key metrics and navigation to other sections of the admin panel.
+This project is a comprehensive Point of Sale (POS) and dashboard application for a café, built with Vue.js, Pinia, and Vite. It provides a seamless, intuitive interface for managing orders, tracking revenue, and configuring promotional activities. The application is designed to be responsive and user-friendly, ensuring a smooth experience on both desktop and mobile devices.
 
-## Style, Design, and Features
+## Key Features
 
-### Style
-*   **Color Palette**:
-    *   Primary background: Light gray with a background image of a coffee shop patio.
-    *   Sidebar: White, with a light orange for the selected item.
-    *   Header: White.
-    *   Buttons:
-        *   Primary action: Bright red (`#ff4d4f`).
-        *   Secondary action: Light orange (`#ffb997`).
-        *   Tertiary action: White.
-    *   Text: Dark gray/black.
-*   **Typography**:
-    *   A clean, modern, sans-serif font is used throughout the application.
-    *   The main title "向天泓咖啡廳" has a distinctive, slightly blurred or glowing effect.
-*   **Layout**:
-    *   A fixed header contains the main title and a secondary button.
-    *   A fixed sidebar on the left provides navigation.
-    *   The main content area on the right displays key metrics and a list of current orders.
-*   **Iconography**:
-    *   The application uses simple, line-based icons for navigation and information display.
+- **Dashboard**: A central hub for monitoring key business metrics, including a revenue analysis chart, order status tracking, and quick access to promotional settings.
+- **Point of Sale (POS)**: An interactive interface for cashiers to place orders, manage the shopping cart, and process payments. It supports various promotion types, including single-item discounts, spend-and-get offers, and spend-and-get discounts.
+- **Promotions Management**: A dedicated section for configuring and enabling different promotional campaigns, which are dynamically reflected in the POS system.
+- **State Management**: Centralized state management powered by Pinia, ensuring data consistency across all components.
 
-### Implemented & Planned Features
+## Styling and Design
 
-#### 1. Dashboard Home (Implemented)
-*   Displays key metrics: Total Settled Amount, Unsettled Amount, Total Orders.
-*   Shows a list of current orders (currently static).
+- **Modern Aesthetics**: The application features a clean and modern design with a focus on visual balance, clear typography, and a vibrant color palette.
+- **Responsive Layout**: The UI is fully responsive and adapts to different screen sizes, providing an optimal experience on both desktop and mobile devices.
+- **Interactive Elements**: The application incorporates a range of interactive UI components, including animated charts, responsive buttons, and intuitive modals, to enhance the user experience.
+- **Visual Effects**: Subtle visual effects, such as drop shadows and glowing elements, are used to create a sense of depth and interactivity.
 
-#### 2. Point of Sale - Set Meal Logic (Current Task)
-*   **Applies to**: "特色風味小火鍋" & "特色風味簡餐" categories.
-*   **Standard Set Includes**:
-    *   1 bowl of White Rice.
-    *   1 standard Drink.
-*   **Standard Drinks**:
-    *   Iced/Hot Black Tea (冰/熱紅茶)
-    *   Iced/Hot Coffee (冰/熱咖啡)
-    *   Lactic Acid Drink (乳酸菌)
-*   **Ordering Flow**:
-    1.  Clicking a set meal item opens a configuration modal.
-    2.  Modal allows selection of one standard drink.
-    3.  Modal allows for upgrading to a non-standard drink with a NT$60 discount applied to the upgraded drink's price.
-    4.  Modal allows for adding extra bowls of rice for NT$10 each.
-*   **Order & Receipt Display**:
-    *   The order details (in the UI and on the printed receipt) must list each component of the set meal separately.
-    *   Example:
-        *   招牌總匯鍋
-        *   白飯 (附贈)
-        *   冰紅茶 (附贈)
-        *   額外加點白飯 (NT$10)
-        *   拿鐵 (更換飲品折抵NT$60)
+## Current Implementation Plan
 
-#### 3. Menu Management (Implemented)
-*   **View**: The main content area will display menu categories.
-*   **Items**: Each item shows a picture, name, and price.
-*   **Actions**: Add, Edit, Delete items.
+### Objective
 
-#### 4. Revenue Analysis (Planned)
-*   **View**: Main content area will display charts for revenue analysis.
-*   **Data**: Line chart showing revenue for the last 7 and 30 days.
+To fully integrate the promotion system with the Point of Sale (POS) component, ensuring that all three types of promotions—single-item discounts, spend-and-get offers, and spend-and-get discounts—are correctly applied to the shopping cart and reflected in the final order.
 
-#### 5. Promotions (Implemented)
-*   **View**: Section to create and manage promotional activities.
-*   **Types**: Item discounts, gift with purchase, order total discounts.
-*   **Actions**: Create, edit, activate, deactivate promotions.
+### Actionable Steps
 
-#### 6. System Settings (Implemented)
-*   **Login Management**: View login history.
-*   **Receipt Notes**: Customize receipt footer message.
-*   **Version Info**: Display app version.
-*   **Support Contact**: Display support info.
-
+1.  **Update Pinia Store**: The `promotions.js` store has been updated to manage the state for all three promotion types, including their enabled status, thresholds, and discount values.
+2.  **Update Promotions Component**: The `Promotions.vue` component has been enhanced to allow users to configure and enable each promotion type. The UI is connected to the Pinia store to ensure that all changes are persisted.
+3.  **Integrate with POS**: The `PointOfSale.vue` component has been updated to apply the promotion logic to the shopping cart. The cart now dynamically updates to reflect single-item discounts, and the total calculation includes spend-and-get discounts. Spend-and-get gifts are also added to the final order upon checkout.
+4.  **Finalize and Verify**: The integration is now complete. The next step is to test the full checkout flow to ensure that all promotions are correctly applied and that the final order accurately reflects the applied discounts and gifts.
