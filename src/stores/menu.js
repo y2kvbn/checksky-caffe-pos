@@ -63,21 +63,20 @@ export const useMenuStore = defineStore('menu', () => {
     { id: 'add01', name: '額外加點白飯', category: '加點', price: 10, inStock: true, image: imageUrls['加點'] },
   ]);
 
-  const categories = computed(() => {
-    const orderedCategories = [
-        '特色風味小火鍋', 
-        '特色風味簡餐', 
-        '單品咖啡', 
-        '義式咖啡', 
-        '茶', 
-        '無咖啡因飲品', 
-        '甜點', 
-        '炸物',
-        '加點'
-    ];
-    return ['全部', ...orderedCategories];
-  });
-  
+  const categories = ref([
+    '特色風味小火鍋',
+    '特色風味簡餐',
+    '單品咖啡',
+    '義式咖啡',
+    '茶',
+    '無咖啡因飲品',
+    '甜點',
+    '炸物',
+    '加點'
+  ]);
+
+  const allCategories = computed(() => ['全部', ...categories.value]);
+
   function addItem(item) {
     const imageUrl = imageUrls[item.category] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&auto=format&fit=crop';
     items.value.unshift({ ...item, id: generateId(), inStock: true, image: imageUrl });
@@ -95,5 +94,43 @@ export const useMenuStore = defineStore('menu', () => {
     items.value = items.value.filter(item => item.id !== itemId);
   }
 
-  return { items, categories, addItem, updateItem, deleteItem };
+  function addCategory(categoryName) {
+    if (categoryName && !categories.value.includes(categoryName)) {
+      categories.value.push(categoryName);
+      if (!imageUrls[categoryName]) {
+          imageUrls[categoryName] = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&auto=format&fit=crop';
+      }
+    }
+  }
+
+  function updateCategory({ oldName, newName }) {
+    if (!newName || oldName === newName || categories.value.includes(newName)) return;
+    const index = categories.value.findIndex(c => c === oldName);
+    if (index !== -1) {
+      categories.value[index] = newName;
+      items.value.forEach(item => {
+        if (item.category === oldName) {
+          item.category = newName;
+        }
+      });
+      if (imageUrls[oldName]) {
+        imageUrls[newName] = imageUrls[oldName];
+        delete imageUrls[oldName];
+      }
+    }
+  }
+
+  function deleteCategory(categoryName) {
+    const isCategoryInUse = items.value.some(item => item.category === categoryName);
+    if (isCategoryInUse) {
+      alert('無法刪除此分類，因為尚有菜單項目正在使用。');
+      return;
+    }
+    categories.value = categories.value.filter(c => c !== categoryName);
+    if (imageUrls[categoryName]) {
+      delete imageUrls[categoryName];
+    }
+  }
+
+  return { items, categories, allCategories, addItem, updateItem, deleteItem, addCategory, updateCategory, deleteCategory };
 });

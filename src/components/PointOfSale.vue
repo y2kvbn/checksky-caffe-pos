@@ -18,7 +18,7 @@
         <h2>分類</h2>
         <ul>
           <li 
-            v-for="category in categories.filter(c => c !== '全部')" 
+            v-for="category in allCategories" 
             :key="category" 
             :class="{ active: category === activeCategory }" 
             @click="activeCategory = category"
@@ -136,12 +136,12 @@ const menuStore = useMenuStore();
 const promotionsStore = usePromotionsStore();
 const settingsStore = useSettingsStore();
 
-const { items: menuItems, categories } = storeToRefs(menuStore);
+const { items: menuItems, allCategories } = storeToRefs(menuStore);
 const { singleItemDeal, spendAndGet, spendAndDiscount } = storeToRefs(promotionsStore);
 const { receiptNotes } = storeToRefs(settingsStore);
 
 const posView = ref(props.view === 'reservations' ? 'reservations' : 'menu'); 
-const activeCategory = ref('特色風味小火鍋'); 
+const activeCategory = ref('全部'); 
 const cart = ref([]);
 const showCheckoutModal = ref(false);
 const isSetMealModalVisible = ref(false);
@@ -155,9 +155,9 @@ const filteredMenu = computed(() => {
   return menuItems.value.filter(item => item.category === activeCategory.value && item.inStock);
 });
 
-watch(categories, (newCategories) => {
-  if (newCategories && newCategories.length > 1 && !newCategories.includes(activeCategory.value)) {
-      activeCategory.value = newCategories[1];
+watch(allCategories, (newCategories) => {
+  if (!newCategories.includes(activeCategory.value)) {
+    activeCategory.value = '全部';
   }
 }, { immediate: true });
 

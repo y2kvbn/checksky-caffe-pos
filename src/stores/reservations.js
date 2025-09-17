@@ -12,7 +12,8 @@ export const useReservationsStore = defineStore('reservations', () => {
     //   date: '2024-07-28',
     //   time: '18:30',
     //   guests: 4,
-    //   babyChairs: 1
+    //   babyChairs: 1,
+    //   notes: '需要靠窗位置'
     // }
   ]);
   let nextId = ref(1);
@@ -27,7 +28,8 @@ export const useReservationsStore = defineStore('reservations', () => {
     const newReservation = {
       ...reservationData,
       id: nextId.value++,
-      babyChairs: reservationData.babyChairs || 0 // Ensure babyChairs has a value
+      babyChairs: reservationData.babyChairs || 0, // Ensure babyChairs has a value
+      notes: reservationData.notes || '' // Add notes field
     };
     reservations.value.push(newReservation);
   }
@@ -37,7 +39,8 @@ export const useReservationsStore = defineStore('reservations', () => {
     if (index !== -1) {
       reservations.value[index] = {
           ...updatedReservation,
-          babyChairs: updatedReservation.babyChairs || 0
+          babyChairs: updatedReservation.babyChairs || 0,
+          notes: updatedReservation.notes || '' // Add notes field
       };
     }
   }

@@ -3,7 +3,7 @@
     <div class="login-page">
       <!-- Left Side: Single Vertical Image -->
       <div class="login-gallery">
-        <img src="https://images.weserv.nl/?url=i.ibb.co/ZzPs8vXt/Artguru-text2image-20250916102830.png&w=600&q=80&output=webp" alt="Cafe Staff" class="gallery-image"/>
+        <img src="https://i.ibb.co/Ps6cZqdL/2025-09-17-091832-processed-lightpdf-com.jpg" alt="Cafe Staff" class="gallery-image"/>
       </div>
 
       <!-- Right Side: Form Container -->

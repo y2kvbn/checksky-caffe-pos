@@ -37,6 +37,7 @@
                     <span><span class="meta-icon">&#128101;</span> {{ reservation.guests }} 位</span>
                     <span v-if="reservation.babyChairs > 0"><span class="meta-icon">&#128118;</span> {{ reservation.babyChairs }} 張嬰兒座椅</span>
                   </div>
+                  <p v-if="reservation.notes" class="item-notes"><b>備註:</b> {{ reservation.notes }}</p>
                 </div>
                 <div class="item-actions">
                   <button class="btn-icon" @click="openEditModal(reservation)" title="編輯">&#9998;</button>
@@ -78,6 +79,10 @@
                   <input type="number" id="babyChairs" v-model.number="currentReservation.babyChairs" min="0">
               </div>
             </div>
+            <div class="form-group">
+                <label for="notes">備註:</label>
+                <textarea id="notes" v-model="currentReservation.notes" rows="3"></textarea>
+            </div>
             <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" @click="closeModal">取消</button>
                 <button type="submit" class="btn btn-primary">{{ modalMode === 'add' ? '儲存' : '更新' }}</button>
@@ -108,7 +113,8 @@ const defaultReservation = () => ({
   date: new Date(selectedDate.value).toISOString().substring(0, 10),
   time: new Date().toTimeString().substring(0, 5),
   guests: 1,
-  babyChairs: 0
+  babyChairs: 0,
+  notes: ''
 });
 const currentReservation = ref(defaultReservation());
 
@@ -292,6 +298,15 @@ const confirmDelete = (reservationId) => {
 
 .item-meta { display: flex; gap: 20px; color: var(--text-light); font-size: 14px; margin-top: 5px; }
 
+.item-notes {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #555;
+  background-color: #f9f9f9;
+  border-left: 3px solid var(--primary-color);
+  padding: 8px 12px;
+}
+
 .meta-icon { margin-right: 5px; }
 
 .item-actions { display: flex; gap: 10px; opacity: 0; transition: opacity 0.2s; }
@@ -319,8 +334,8 @@ const confirmDelete = (reservationId) => {
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .form-group { margin-bottom: 20px; }
 .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
-.form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; transition: border-color 0.2s; }
-.form-group input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.1); }
+.form-group input, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; transition: border-color 0.2s; }
+.form-group input:focus, .form-group textarea:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.1); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; }
 
 /* General Button Styles */
