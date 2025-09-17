@@ -122,12 +122,12 @@ const confirmPassword = ref('');
 // Computed property for form title
 const formTitle = computed(() => {
   switch (viewState.value) {
-    case 'login': return '總部系統登入';
+    case 'login': return '點餐系統登入';
     case 'forgotPassword': return '忘記密碼';
     case 'enterCode': return '輸入驗證碼';
     case 'resetPassword': return '設定新密碼';
     case 'success': return '重設成功';
-    default: return '總部系統';
+    default: return '點餐系統';
   }
 });
 

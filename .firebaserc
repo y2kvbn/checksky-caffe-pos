@@ -1,15 +1,5 @@
 {
   "projects": {
     "default": "aicheck-squad"
-  },
-  "targets": {
-    "aicheck-squad": {
-      "hosting": {
-        "app": [
-          "aicheck-squad"
-        ]
-      }
-    }
-  },
-  "etags": {}
+  }
 }
