@@ -111,6 +111,13 @@
       @close="isSetMealModalVisible = false"
       @confirm="handleSetMealConfirm"
     />
+    
+    <!-- Select Table Modal -->
+    <SelectTableModal 
+        :is-visible="isTableModalVisible" 
+        @close="isTableModalVisible = false"
+        @select-table="handleTableSelected"
+    />
   </div>
 </template>
 
@@ -121,8 +128,10 @@ import { useOrdersStore } from '../stores/orders';
 import { useMenuStore } from '../stores/menu';
 import { usePromotionsStore } from '../stores/promotions';
 import { useSettingsStore } from '../stores/settings';
+import { useTablesStore } from '../stores/tables';
 import SetMealModal from './SetMealModal.vue';
 import ReservationManagement from './ReservationManagement.vue';
+import SelectTableModal from './SelectTableModal.vue';
 
 const props = defineProps({
   view: {
@@ -135,6 +144,7 @@ const ordersStore = useOrdersStore();
 const menuStore = useMenuStore();
 const promotionsStore = usePromotionsStore();
 const settingsStore = useSettingsStore();
+const tablesStore = useTablesStore(); // eslint-disable-line
 
 const { items: menuItems, allCategories } = storeToRefs(menuStore);
 const { singleItemDeal, spendAndGet, spendAndDiscount } = storeToRefs(promotionsStore);
@@ -145,7 +155,9 @@ const activeCategory = ref('全部');
 const cart = ref([]);
 const showCheckoutModal = ref(false);
 const isSetMealModalVisible = ref(false);
+const isTableModalVisible = ref(false);
 const selectedSetMeal = ref(null);
+const selectedTable = ref(null);
 let cartIdCounter = 0;
 
 const filteredMenu = computed(() => {
@@ -254,8 +266,14 @@ const decreaseQuantity = (item) => {
 
 const checkout = () => {
     if (cart.value.length > 0) {
-        showCheckoutModal.value = true;
+        isTableModalVisible.value = true;
     }
+};
+
+const handleTableSelected = (table) => {
+    selectedTable.value = table;
+    isTableModalVisible.value = false;
+    showCheckoutModal.value = true; // Now show payment options
 };
 
 const processOrder = (paymentMethod) => {
@@ -282,12 +300,14 @@ const processOrder = (paymentMethod) => {
         paymentMethod: paymentMethod,
         appliedPromotion: appliedPromotion,
         timestamp: new Date().toISOString(),
-        receiptNotes: receiptNotes.value
+        receiptNotes: receiptNotes.value,
+        table: selectedTable.value ? selectedTable.value.name : '未指定' // Add table name to order
     };
 
     ordersStore.addOrder(newOrder);
     cart.value = [];
     showCheckoutModal.value = false;
+    selectedTable.value = null; // Reset selected table
     emit('setView', 'dashboard');
 };
 

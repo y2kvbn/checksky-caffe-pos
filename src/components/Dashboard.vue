@@ -11,6 +11,7 @@
         <ul>
           <li :class="{ active: activeView === 'DashboardHome' }" @click="activeView = 'DashboardHome'"><a href="#"><span>&#128276;</span> 即時訂單</a></li>
           <li :class="{ active: activeView === 'MenuManagement' }" @click="activeView = 'MenuManagement'"><a href="#"><span>&#127869;</span> 菜單管理</a></li>
+          <li :class="{ active: activeView === 'TableManagement' }" @click="activeView = 'TableManagement'"><a href="#"><span>&#129681;</span> 桌號管理</a></li>
           <li :class="{ active: activeView === 'RevenueAnalysis' }" @click="activeView = 'RevenueAnalysis'"><a href="#"><span>&#128202;</span> 營收分析</a></li>
           <li :class="{ active: activeView === 'Promotions' }" @click="activeView = 'Promotions'"><a href="#"><span>&#127991;</span> 優惠活動</a></li>
           <li :class="{ active: activeView === 'SystemSettings' }" @click="activeView = 'SystemSettings'"><a href="#"><span>&#9881;</span> 系統設定</a></li>
@@ -39,6 +40,7 @@ const activeView = ref('DashboardHome');
 const views = shallowRef({
   DashboardHome: defineAsyncComponent(() => import('./DashboardHome.vue')),
   MenuManagement: defineAsyncComponent(() => import('./MenuManagement.vue')),
+  TableManagement: defineAsyncComponent(() => import('./TableManagement.vue')),
   RevenueAnalysis: defineAsyncComponent(() => import('./RevenueAnalysis.vue')),
   Promotions: defineAsyncComponent(() => import('./Promotions.vue')),
   SystemSettings: defineAsyncComponent(() => import('./SystemSettings.vue')),
@@ -225,6 +227,4 @@ const goToReservations = () => {
     background-color: #f5c6cb;
     border-color: #f1b0b7;
 }
-
-
 </style>

@@ -56,6 +56,7 @@
                   <span class="item-name">{{ reservation.name }}</span>
                   <div class="item-meta">
                     <span><span class="meta-icon">&#128101;</span> {{ reservation.guests }} 位</span>
+                     <span v-if="reservation.tableId"><span class="meta-icon">&#129681;</span> {{ getTableName(reservation.tableId) }}</span>
                     <span v-if="reservation.babyChairs > 0"><span class="meta-icon">&#128118;</span> {{ reservation.babyChairs }} 張嬰兒座椅</span>
                   </div>
                   <p v-if="reservation.notes" class="item-notes"><b>備註:</b> {{ reservation.notes }}</p>
@@ -82,15 +83,17 @@
                 <label for="name">訂位姓名:</label>
                 <input type="text" id="name" v-model="currentReservation.name" required>
             </div>
-            <div class="form-group">
-                <label for="date">訂位日期:</label>
-                <input type="date" id="date" v-model="currentReservation.date" required>
-            </div>
-            <div class="form-group">
-                <label for="time">訂位時間:</label>
-                <input type="time" id="time" v-model="currentReservation.time" required>
-            </div>
             <div class="form-grid">
+                 <div class="form-group">
+                    <label for="date">訂位日期:</label>
+                    <input type="date" id="date" v-model="currentReservation.date" required>
+                </div>
+                <div class="form-group">
+                    <label for="time">訂位時間:</label>
+                    <input type="time" id="time" v-model="currentReservation.time" required>
+                </div>
+            </div>
+             <div class="form-grid">
               <div class="form-group">
                   <label for="guests">訂位人數:</label>
                   <input type="number" id="guests" v-model.number="currentReservation.guests" min="1" required>
@@ -99,6 +102,15 @@
                   <label for="babyChairs">嬰兒座椅:</label>
                   <input type="number" id="babyChairs" v-model.number="currentReservation.babyChairs" min="0">
               </div>
+            </div>
+            <div class="form-group">
+                <label for="table">安排桌號:</label>
+                 <select id="table" v-model="currentReservation.tableId">
+                    <option :value="null">稍後安排</option>
+                    <option v-for="table in tables" :key="table.id" :value="table.id">
+                        {{ table.name }}
+                    </option>
+                </select>
             </div>
             <div class="form-group">
                 <label for="notes">備註:</label>
@@ -117,6 +129,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useReservationsStore } from '../stores/reservations';
+import { useTablesStore } from '../stores/tables';
 import { storeToRefs } from 'pinia';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-tw';
@@ -129,7 +142,10 @@ const reservationsStore = useReservationsStore();
 const { reservations } = storeToRefs(reservationsStore);
 const { addReservation, updateReservation, deleteReservation } = reservationsStore;
 
-const selectedDate = ref(dayjs('2025-09-01'));
+const tablesStore = useTablesStore();
+const { tables } = storeToRefs(tablesStore);
+
+const selectedDate = ref(dayjs());
 const isModalVisible = ref(false);
 const modalMode = ref('add');
 
@@ -140,10 +156,22 @@ const defaultReservation = () => ({
   time: dayjs().format('HH:mm'),
   guests: 1,
   babyChairs: 0,
-  notes: ''
+  notes: '',
+  tableId: null
 });
 
 const currentReservation = ref(defaultReservation());
+
+const tableMap = computed(() => {
+  return tables.value.reduce((acc, table) => {
+    acc[table.id] = table.name;
+    return acc;
+  }, {});
+});
+
+const getTableName = (tableId) => {
+  return tableMap.value[tableId] || '未指定';
+};
 
 const headerDate = computed(() => {
     return selectedDate.value.format('YYYY年 MMMM D日 dddd');
@@ -485,7 +513,7 @@ const reservationsForSelectedDate = computed(() => {
 
 .item-name { font-size: 18px; font-weight: 600; color: var(--text-dark); }
 
-.item-meta { display: flex; gap: 20px; color: var(--text-light); font-size: 14px; margin-top: 5px; }
+.item-meta { display: flex; flex-wrap: wrap; gap: 15px; color: var(--text-light); font-size: 14px; margin-top: 5px; }
 
 .item-notes {
   margin-top: 10px;
@@ -523,8 +551,8 @@ const reservationsForSelectedDate = computed(() => {
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .form-group { margin-bottom: 20px; }
 .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
-.form-group input, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; transition: border-color 0.2s; }
-.form-group input:focus, .form-group textarea:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.1); }
+.form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; transition: border-color 0.2s; font-size: 1rem; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.1); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; }
 
 /* General Button Styles */

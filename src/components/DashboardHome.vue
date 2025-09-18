@@ -49,6 +49,7 @@
               </div>
             </div>
             <div class="order-details">
+              <p><strong><i class="fas fa-chair"></i></strong> {{ order.table || '未指定' }}</p>
               <p><strong><i class="far fa-clock"></i></strong> {{ formatTime(order.timestamp) }}</p>
               <p><strong><i class="far fa-credit-card"></i></strong> {{ order.paymentMethod === 'cash' ? '現金' : 'LinePay' }}</p>
               <p class="total"><strong>總金額:</strong> NT${{ order.total.toFixed(2) }}</p>
@@ -235,6 +236,7 @@ const handlePrint = () => {
 .order-items { margin-bottom: 15px; }
 .order-item { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
 .order-details p { margin: 5px 0; font-size: 14px; color: #777; display: flex; align-items: center; gap: 8px;}
+.order-details p:first-of-type { font-weight: bold; color: #333; }
 .order-details p.total { font-size: 16px; font-weight: bold; color: #333; margin-top: 10px; }
 
 .order-card-actions { display: flex; gap: 10px; padding: 10px 15px; background-color: #f9fafb; border-top: 1px solid #f0f0f0; justify-content: flex-end; }

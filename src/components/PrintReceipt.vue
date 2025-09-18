@@ -6,6 +6,7 @@
         <h2 class="store-name">iCheck Cafe</h2>
         <p>訂單編號: {{ order.id }}</p>
         <p>訂單時間: {{ formattedDate }}</p>
+        <p v-if="order.table">桌號: {{ order.table }}</p>
       </div>
 
       <!-- Items -->
