@@ -14,15 +14,20 @@
 
     <!-- Main Content: Calendar & Timeline -->
     <div class="reservation-body">
-      <aside class="calendar-sidebar">
-        <v-calendar
+      <div class="calendar-column">
+        <div class="calendar-header">
+          <button @click="moveMonth(-1)">&#8249;</button>
+          <h3>{{ calendarTitle }}</h3>
+          <button @click="moveMonth(1)">&#8250;</button>
+        </div>
+        <VCalendar
           is-expanded
-          :attributes="calendarAttributes"
           v-model="selectedDate"
+          :attributes="calendarAttributes"
           @dayclick="onDayClick"
           class="custom-calendar"
         />
-      </aside>
+      </div>
       <main class="timeline-main">
         <div class="timeline-header">
             <h3>{{ sidebarTitle }}</h3>
@@ -94,10 +99,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useReservationsStore } from '../stores/reservations';
 import { storeToRefs } from 'pinia';
-import { Calendar } from 'v-calendar';
+import { Calendar as VCalendar } from 'v-calendar';
 import 'v-calendar/style.css';
 
 const reservationsStore = useReservationsStore();
@@ -105,8 +110,10 @@ const { reservations } = storeToRefs(reservationsStore);
 const { addReservation, updateReservation, deleteReservation } = reservationsStore;
 
 const selectedDate = ref(new Date());
+const calendar = ref(null);
 const isModalVisible = ref(false);
 const modalMode = ref('add');
+
 const defaultReservation = () => ({
   id: null,
   name: '',
@@ -120,12 +127,18 @@ const currentReservation = ref(defaultReservation());
 
 const headerDate = computed(() => {
     const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-    return new Date(selectedDate.value).toLocaleDateString('zh-TW', options);
+    return selectedDate.value.toLocaleDateString('zh-TW', options);
 });
 
 const sidebarTitle = computed(() => {
     const options = { month: 'long', day: 'numeric' };
-    return `${new Date(selectedDate.value).toLocaleDateString('zh-TW', options)} 訂位時間軸`;
+    return `${selectedDate.value.toLocaleDateString('zh-TW', options)} 訂位時間軸`;
+});
+
+const calendarTitle = computed(() => {
+  if (!selectedDate.value) return '';
+  const options = { year: 'numeric', month: 'long' };
+  return selectedDate.value.toLocaleDateString('zh-TW', options);
 });
 
 const reservationsForSelectedDate = computed(() => {
@@ -133,18 +146,60 @@ const reservationsForSelectedDate = computed(() => {
     return reservations.value.filter(r => r.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
 });
 
-const calendarAttributes = computed(() => [
-  { key: 'today', highlight: { color: 'purple', fillMode: 'light' }, dates: new Date() },
-  { key: 'selected', highlight: { color: 'purple', fillMode: 'solid' }, dates: selectedDate.value },
-  {
-    dot: 'red',
-    dates: reservations.value.map(r => {
-        const date = new Date(r.date);
+const dailyGuestCounts = computed(() => {
+    const counts = {};
+    for (const r of reservations.value) {
+        const date = r.date;
+        counts[date] = (counts[date] || 0) + r.guests;
+    }
+    return counts;
+});
+
+const calendarAttributes = computed(() => {
+    const attrs = Object.entries(dailyGuestCounts.value).map(([dateStr, count]) => {
+        let color = 'gray';
+        if (count >= 1 && count <= 10) {
+            color = 'green';
+        } else if (count >= 11 && count <= 20) {
+            color = 'yellow';
+        } else if (count >= 21) {
+            color = 'red';
+        }
+        
+        const date = new Date(dateStr);
         date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-        return date;
-    })
-  }
-]);
+
+        return {
+            key: `count-${dateStr}`,
+            highlight: {
+                color,
+                fillMode: 'light',
+            },
+            popover: {
+              label: `${count} 位訂位`,
+            },
+            dates: date,
+        };
+    });
+
+    attrs.push({
+        key: 'today',
+        dot: true,
+        dates: new Date(),
+    });
+    
+     attrs.push({
+        key: 'selected',
+        highlight: {
+          color: 'purple',
+          fillMode: 'solid',
+        },
+        dates: selectedDate.value,
+    });
+
+
+    return attrs;
+});
 
 const changeDay = (offset) => {
   const newDate = new Date(selectedDate.value);
@@ -152,7 +207,15 @@ const changeDay = (offset) => {
   selectedDate.value = newDate;
 };
 
-const goToToday = () => { selectedDate.value = new Date(); };
+const moveMonth = (offset) => {
+  const newDate = new Date(selectedDate.value);
+  newDate.setMonth(newDate.getMonth() + offset, 1); // Set to day 1 to avoid month skipping issues
+  selectedDate.value = newDate;
+}
+
+const goToToday = () => { 
+    selectedDate.value = new Date();
+};
 const onDayClick = (day) => { selectedDate.value = day.date; };
 
 const openAddModal = () => {
@@ -248,13 +311,50 @@ const confirmDelete = (reservationId) => {
   overflow: hidden;
 }
 
-.calendar-sidebar {
-    border-right: 1px solid var(--border-color);
-    padding-right: 25px;
+.calendar-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.calendar-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    flex-grow: 1;
+    text-align: center;
+}
+
+.calendar-header button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+.calendar-header button:hover {
+    color: #333;
 }
 
 .custom-calendar {
-    border: none;
+    border-radius: 12px !important;
+    box-shadow: var(--shadow) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+:deep(.vc-text-black) {
+    color: #000000 !important;
+}
+
+:deep(.vc-text-white) {
+    color: #ffffff !important;
 }
 
 .timeline-main {
