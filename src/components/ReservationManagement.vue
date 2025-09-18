@@ -20,13 +20,29 @@
           <h3>{{ calendarTitle }}</h3>
           <button @click="moveMonth(1)">&#8250;</button>
         </div>
-        <VCalendar
-          is-expanded
-          v-model="selectedDate"
-          :attributes="calendarAttributes"
-          @dayclick="onDayClick"
-          class="custom-calendar"
-        />
+        <!-- Custom Calendar -->
+        <div class="custom-calendar">
+          <div class="calendar-weekdays">
+            <div v-for="day in weekdays" :key="day" class="weekday">{{ day }}</div>
+          </div>
+          <div class="calendar-grid">
+            <div
+              v-for="(day, index) in calendarGrid"
+              :key="index"
+              class="calendar-day"
+              :class="{
+                'is-today': day.isToday,
+                'is-selected': day.isSelected,
+                'not-current-month': !day.isCurrentMonth
+              }"
+              @click="selectDay(day)"
+            >
+              <span class="day-number">{{ day.number }}</span>
+               <div v-if="day.highlight" class="day-highlight" :style="{ backgroundColor: day.highlight.color, opacity: 0.2 }"></div>
+               <div v-if="day.highlight" class="day-popover">{{ day.highlight.label }}</div>
+            </div>
+          </div>
+        </div>
       </div>
       <main class="timeline-main">
         <div class="timeline-header">
@@ -99,52 +115,49 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useReservationsStore } from '../stores/reservations';
 import { storeToRefs } from 'pinia';
-import { Calendar as VCalendar } from 'v-calendar';
-import 'v-calendar/style.css';
+import dayjs from 'dayjs';
+import 'dayjs/locale/zh-tw';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+dayjs.locale('zh-tw');
+dayjs.extend(localizedFormat);
 
 const reservationsStore = useReservationsStore();
 const { reservations } = storeToRefs(reservationsStore);
 const { addReservation, updateReservation, deleteReservation } = reservationsStore;
 
-const selectedDate = ref(new Date());
-const calendar = ref(null);
+const selectedDate = ref(dayjs('2025-09-01'));
 const isModalVisible = ref(false);
 const modalMode = ref('add');
 
 const defaultReservation = () => ({
   id: null,
   name: '',
-  date: new Date(selectedDate.value).toISOString().substring(0, 10),
-  time: new Date().toTimeString().substring(0, 5),
+  date: selectedDate.value.format('YYYY-MM-DD'),
+  time: dayjs().format('HH:mm'),
   guests: 1,
   babyChairs: 0,
   notes: ''
 });
+
 const currentReservation = ref(defaultReservation());
 
 const headerDate = computed(() => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-    return selectedDate.value.toLocaleDateString('zh-TW', options);
+    return selectedDate.value.format('YYYY年 MMMM D日 dddd');
 });
 
 const sidebarTitle = computed(() => {
-    const options = { month: 'long', day: 'numeric' };
-    return `${selectedDate.value.toLocaleDateString('zh-TW', options)} 訂位時間軸`;
+    return `${selectedDate.value.format('MMMM D日')} 訂位時間軸`;
 });
 
 const calendarTitle = computed(() => {
-  if (!selectedDate.value) return '';
-  const options = { year: 'numeric', month: 'long' };
-  return selectedDate.value.toLocaleDateString('zh-TW', options);
+  return selectedDate.value.format('YYYY年 MMMM');
 });
 
-const reservationsForSelectedDate = computed(() => {
-    const dateStr = new Date(selectedDate.value).toISOString().substring(0, 10);
-    return reservations.value.filter(r => r.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
-});
+const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 
 const dailyGuestCounts = computed(() => {
     const counts = {};
@@ -155,73 +168,77 @@ const dailyGuestCounts = computed(() => {
     return counts;
 });
 
-const calendarAttributes = computed(() => {
-    const attrs = Object.entries(dailyGuestCounts.value).map(([dateStr, count]) => {
+const calendarGrid = computed(() => {
+  const startOfMonth = selectedDate.value.startOf('month');
+  const endOfMonth = selectedDate.value.endOf('month');
+  const startDay = startOfMonth.day(); // 0 for Sunday, 1 for Monday, etc.
+  const daysInMonth = startOfMonth.daysInMonth();
+
+  const grid = [];
+
+  // Add days from previous month
+  for (let i = 0; i < startDay; i++) {
+    const day = startOfMonth.subtract(startDay - i, 'day');
+    grid.push({ date: day, number: day.date(), isCurrentMonth: false });
+  }
+
+  // Add days of current month
+  for (let i = 1; i <= daysInMonth; i++) {
+    const day = startOfMonth.date(i);
+    const dateStr = day.format('YYYY-MM-DD');
+    const count = dailyGuestCounts.value[dateStr];
+    let highlight = null;
+
+    if (count) {
         let color = 'gray';
-        if (count >= 1 && count <= 10) {
-            color = 'green';
-        } else if (count >= 11 && count <= 20) {
-            color = 'yellow';
-        } else if (count >= 21) {
-            color = 'red';
-        }
-        
-        const date = new Date(dateStr);
-        date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+        if (count >= 1 && count <= 10) color = '#2ecc71'; // green
+        else if (count >= 11 && count <= 20) color = '#f1c40f'; // yellow
+        else if (count >= 21) color = '#e74c3c'; // red
+        highlight = { color, label: `${count} 位訂位` };
+    }
 
-        return {
-            key: `count-${dateStr}`,
-            highlight: {
-                color,
-                fillMode: 'light',
-            },
-            popover: {
-              label: `${count} 位訂位`,
-            },
-            dates: date,
-        };
+    grid.push({
+      date: day,
+      number: i,
+      isCurrentMonth: true,
+      isToday: day.isSame(dayjs(), 'day'),
+      isSelected: day.isSame(selectedDate.value, 'day'),
+      highlight
     });
+  }
 
-    attrs.push({
-        key: 'today',
-        dot: true,
-        dates: new Date(),
-    });
-    
-     attrs.push({
-        key: 'selected',
-        highlight: {
-          color: 'purple',
-          fillMode: 'solid',
-        },
-        dates: selectedDate.value,
-    });
+  // Add days from next month
+  const remainingCells = 42 - grid.length; // 6 weeks * 7 days
+  for (let i = 1; i <= remainingCells; i++) {
+    const day = endOfMonth.add(i, 'day');
+    grid.push({ date: day, number: day.date(), isCurrentMonth: false });
+  }
 
-
-    return attrs;
+  return grid;
 });
 
+
 const changeDay = (offset) => {
-  const newDate = new Date(selectedDate.value);
-  newDate.setDate(newDate.getDate() + offset);
-  selectedDate.value = newDate;
+  selectedDate.value = selectedDate.value.add(offset, 'day');
 };
 
 const moveMonth = (offset) => {
-  const newDate = new Date(selectedDate.value);
-  newDate.setMonth(newDate.getMonth() + offset, 1); // Set to day 1 to avoid month skipping issues
-  selectedDate.value = newDate;
-}
+  selectedDate.value = selectedDate.value.add(offset, 'month');
+};
 
 const goToToday = () => { 
-    selectedDate.value = new Date();
+    selectedDate.value = dayjs();
 };
-const onDayClick = (day) => { selectedDate.value = day.date; };
+
+const selectDay = (day) => {
+    if (!day.date) return;
+    selectedDate.value = day.date;
+}
 
 const openAddModal = () => {
   modalMode.value = 'add';
   currentReservation.value = defaultReservation();
-  currentReservation.value.date = new Date(selectedDate.value).toISOString().substring(0, 10);
+  currentReservation.value.date = selectedDate.value.format('YYYY-MM-DD');
   isModalVisible.value = true;
 };
 
@@ -248,6 +265,12 @@ const confirmDelete = (reservationId) => {
     deleteReservation(reservationId);
   }
 };
+
+const reservationsForSelectedDate = computed(() => {
+    const dateStr = selectedDate.value.format('YYYY-MM-DD');
+    return reservations.value.filter(r => r.date === dateStr).sort((a, b) => a.time.localeCompare(b.time));
+});
+
 </script>
 
 <style scoped>
@@ -305,7 +328,7 @@ const confirmDelete = (reservationId) => {
 
 .reservation-body {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: 3fr 7fr; /* 30% / 70% split */
   gap: 25px;
   flex-grow: 1;
   overflow: hidden;
@@ -321,6 +344,7 @@ const confirmDelete = (reservationId) => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    padding: 0 10px; 
 }
 
 .calendar-header h3 {
@@ -343,19 +367,84 @@ const confirmDelete = (reservationId) => {
     color: #333;
 }
 
+/* Custom Calendar Styles */
 .custom-calendar {
-    border-radius: 12px !important;
-    box-shadow: var(--shadow) !important;
-    border: 1px solid var(--border-color) !important;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  background: var(--card-background);
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: var(--shadow);
+}
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-weight: bold;
+  color: var(--text-light);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 1fr;
+  flex-grow: 1;
+  gap: 5px;
+}
+.calendar-day {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+.calendar-day:hover { background-color: #f0f0f0; }
+.day-number { z-index: 1; }
+.not-current-month .day-number { color: #ccc; }
+.is-today .day-number { 
+  font-weight: bold;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  border-radius: 50%;
+  width: 2.2em;
+  height: 2.2em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.is-selected {
+  background-color: var(--primary-color) !important;
+  color: white;
+}
+.is-selected .day-number { color: white; border-color: transparent !important; }
+.day-highlight {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 8px;
+  z-index: 0;
+}
+.calendar-day:hover .day-popover {
+  display: block;
+}
+.day-popover {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-5px);
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
 }
 
-:deep(.vc-text-black) {
-    color: #000000 !important;
-}
-
-:deep(.vc-text-white) {
-    color: #ffffff !important;
-}
 
 .timeline-main {
   background: var(--card-background);
