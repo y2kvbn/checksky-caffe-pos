@@ -20,6 +20,21 @@ export const useTablesStore = defineStore('tables', () => {
       if (tables.value.length > 0) {
         nextId.value = Math.max(...tables.value.map(t => t.id)) + 1;
       }
+    } else {
+      // If no tables in storage, create default tables
+      const defaultTables = [
+        { id: 1, name: 'A1' },
+        { id: 2, name: 'A2' },
+        { id: 3, name: 'A3' },
+        { id: 4, name: 'A4' },
+        { id: 5, name: 'A5' },
+        { id: 6, name: 'B1' },
+        { id: 7, name: 'B2' },
+        { id: 8, name: 'B3' },
+      ];
+      tables.value = defaultTables;
+      nextId.value = 9;
+      saveTablesToStorage();
     }
   }
 

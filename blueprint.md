@@ -26,19 +26,13 @@ This project is a comprehensive Point of Sale (POS) and dashboard application fo
 
 ### Objective
 
-To enhance the application by adding a notes feature to reservations for better customer service and implementing a comprehensive menu category management system in the dashboard to provide店家 complete control over the POS menu.
+To refactor the table selection feature by allowing users to select or change their table at any time during the ordering process, rather than being prompted only at checkout.
 
 ### Actionable Steps
 
-1.  **Add Reservation Notes Feature**:
-    -   **Store Update**: Modified `src/stores/reservations.js` to include a `notes` field in the reservation data structure, with default empty strings for new and updated entries.
-    -   **UI Enhancement**: Updated `src/components/ReservationManagement.vue` to include a `<textarea>` in the add/edit modal, allowing users to input customer-specific requests.
-    -   **Display Update**: Enhanced the reservation list to prominently display saved notes with a distinct style, making them easily visible to staff.
-
-2.  **Implement Dynamic Menu Category Management**:
-    -   **Store Refactoring**: Overhauled `src/stores/menu.js` to transform the static category list into a dynamic, state-managed `ref`. Added `addCategory`, `updateCategory`, and `deleteCategory` actions to provide full CRUD functionality. The update logic also handles the renaming of categories across all related menu items.
-    -   **Management UI Redesign**: Completely redesigned `src/components/MenuManagement.vue` into a more intuitive two-column layout. The left panel is dedicated to category management (add, edit, delete), while the right panel displays the menu items for the selected category.
-    -   **Dynamic POS View**: Updated `src/components/PointOfSale.vue` to fetch its category list from the `allCategories` computed property in the menu store, ensuring that any changes made in the management dashboard are instantly reflected in the customer-facing POS interface.
-
-3.  **Update Blueprint**: The project's `blueprint.md` has been updated to reflect these new features and implementation details (This step is complete).
-
+1.  **Analyze Existing Flow**: Review the code for the checkout process, particularly in `PointOfSale.vue` and `SelectTableModal.vue`, to understand how table selection is currently triggered and handled.
+2.  **Modify POS Interface**: Add a prominent button or display area in `PointOfSale.vue` that shows the currently selected table number and allows users to open the `SelectTableModal.vue` to either choose a new table or change the existing one.
+3.  **Integrate Table Selection Modal**: Ensure the `SelectTableModal.vue` is triggered correctly from the new button in the POS interface.
+4.  **Update State Management**: The selected table will be stored in the application's state so it can be accessed and updated throughout the ordering process.
+5.  **Adjust Checkout Logic**: Remove the old logic that triggers the table selection modal during checkout. Instead, the system will now check if a table has been selected and, if not, prompt the user to select one before finalizing the order.
+6.  **Update Blueprint**: The project's `blueprint.md` has been updated to reflect these new features and implementation details (This step is complete).

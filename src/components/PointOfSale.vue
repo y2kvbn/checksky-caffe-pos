@@ -16,7 +16,7 @@
       <!-- Category Sidebar (shown only in menu view) -->
       <aside class="category-sidebar" v-if="posView === 'menu'">
         <h2>分類</h2>
-        <ul>
+        <ul class="category-list">
           <li 
             v-for="category in allCategories" 
             :key="category" 
@@ -50,6 +50,13 @@
       <aside class="cart-sidebar" v-if="posView === 'menu'">
         <div class="cart">
           <h2>我的購物車</h2>
+          <div class="table-selection-wrapper">
+              <div v-if="selectedTable" class="table-display">
+                  <span>桌號: <strong>{{ selectedTable.name }}</strong></span>
+                  <button @click="isTableModalVisible = true">更換</button>
+              </div>
+              <button v-else class="btn btn-secondary" @click="isTableModalVisible = true">&#128442; 選擇桌號</button>
+          </div>
           <div class="cart-body">
             <div v-if="cart.length === 0" class="cart-empty">
               <p>購物車是空的</p>
@@ -59,7 +66,7 @@
                   <div class="item-info-cart">
                       <span class="item-name">{{ item.name }} <span v-if="item.isGift" class="gift-tag">[贈品]</span></span>
                       <span class="item-price" :class="{ 'original-price': item.discountedPrice !== item.price }">NT${{ item.price }}</span>
-                       <span v-if="item.discountedPrice !== item.price" class="discounted-price">NT${{ item.discountedPrice }}</span>
+                      <span v-if="item.discountedPrice !== item.price" class="discounted-price">NT${{ item.discountedPrice }}</span>
                   </div>
                   <div class="item-quantity-controls">
                       <button @click="decreaseQuantity(item)">-</button>
@@ -86,7 +93,7 @@
               <span>總計:</span>
               <span>NT${{ total }}</span>
             </div>
-            <button class="btn btn-confirm" @click="checkout">前往結帳</button>
+            <button class="btn btn-confirm" @click="checkout" :disabled="!selectedTable">前往結帳</button>
           </div>
         </div>
       </aside>
@@ -265,15 +272,16 @@ const decreaseQuantity = (item) => {
 };
 
 const checkout = () => {
-    if (cart.value.length > 0) {
-        isTableModalVisible.value = true;
-    }
+  if (cart.value.length > 0 && selectedTable.value) {
+    showCheckoutModal.value = true;
+  } else {
+    alert("請先選擇桌號再進行結帳。");
+  }
 };
 
 const handleTableSelected = (table) => {
-    selectedTable.value = table;
-    isTableModalVisible.value = false;
-    showCheckoutModal.value = true; // Now show payment options
+  selectedTable.value = table;
+  isTableModalVisible.value = false;
 };
 
 const processOrder = (paymentMethod) => {
@@ -314,7 +322,6 @@ const processOrder = (paymentMethod) => {
 </script>
 
 <style scoped>
-
 .pos-main {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -324,7 +331,6 @@ const processOrder = (paymentMethod) => {
   padding: 25px;
 }
 
-/* New style for single column layout */
 .pos-main.single-column-layout {
   grid-template-columns: 1fr;
 }
@@ -358,6 +364,7 @@ const processOrder = (paymentMethod) => {
   border-bottom: 1px solid var(--border-color);
   box-shadow: var(--shadow-soft);
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .pos-header .logo {
@@ -377,8 +384,10 @@ const processOrder = (paymentMethod) => {
   padding: 25px;
   border-radius: 12px;
   box-shadow: var(--shadow-soft);
-  overflow-y: auto;
   width: 240px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .category-sidebar h2 {
@@ -386,12 +395,15 @@ const processOrder = (paymentMethod) => {
   color: var(--text-dark);
   margin-top: 0;
   margin-bottom: 25px;
+  flex-shrink: 0;
 }
 
-.category-sidebar ul, .cart-items {
+.category-sidebar .category-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  overflow-y: auto; 
+  flex-grow: 1;
 }
 
 .category-sidebar li {
@@ -488,7 +500,7 @@ const processOrder = (paymentMethod) => {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; 
+  overflow: hidden;
 }
 
 .cart h2 {
@@ -496,12 +508,14 @@ const processOrder = (paymentMethod) => {
   color: var(--text-dark);
   margin: 0 0 20px 0;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .cart-body {
-  flex: 1; 
-  overflow-y: auto; 
-  padding-right: 10px;
+  flex-grow: 1;
+  overflow-y: auto;
+  margin: 0 -15px;
+  padding: 0 15px;
 }
 
 .cart-empty {
@@ -510,6 +524,12 @@ const processOrder = (paymentMethod) => {
     justify-content: center;
     align-items: center;
     color: var(--text-light);
+}
+
+.cart-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .cart-item {
@@ -560,6 +580,7 @@ const processOrder = (paymentMethod) => {
 .cart-summary {
     border-top: 2px solid var(--border-color);
     padding-top: 20px;
+    flex-shrink: 0;
 }
 
 .summary-item, .summary-total {
@@ -592,6 +613,7 @@ const processOrder = (paymentMethod) => {
 .btn-outline:hover, .btn-outline.active { background-color: #ffb997; color: var(--text-dark); }
 .btn-confirm { width: 100%; padding: 16px; font-size: 18px; justify-content: center; background-color: var(--secondary-color); color: var(--text-dark); }
 .btn-confirm:hover { opacity: 0.9; }
+.btn-confirm:disabled { background-color: #ccc; cursor: not-allowed; }
 
 .checkout-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .modal-content { background-color: #fff; padding: 40px; border-radius: 15px; box-shadow: var(--shadow); text-align: center; }
@@ -601,5 +623,16 @@ const processOrder = (paymentMethod) => {
 .btn-linepay { background-color: #00B900; color: white; }
 .btn-secondary { background-color: #a0aec0; color: white; width: 100%; }
 .gift-tag { color: #38a169; font-weight: bold; font-size: 12px; margin-left: 5px; }
+
+.table-selection-wrapper { 
+    padding-bottom: 15px; 
+    margin-bottom: 15px; 
+    text-align: center; 
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.table-display { display: flex; justify-content: space-between; align-items: center; background-color: #f7f7f7; padding: 10px 15px; border-radius: 8px; }
+.table-display span { font-size: 1rem; color: #333; }
+.table-display button { font-size: 0.8rem; padding: 4px 8px; border-radius: 5px; background-color: #e0e0e0; cursor: pointer; border: none; }
 
 </style>
