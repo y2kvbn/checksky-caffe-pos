@@ -326,9 +326,9 @@ const processOrder = (paymentMethod) => {
   display: grid;
   grid-template-columns: auto 1fr auto;
   flex-grow: 1;
-  overflow: hidden;
   gap: 25px;
   padding: 25px;
+  overflow: hidden; /* This is necessary to contain the children */
 }
 
 .pos-main.single-column-layout {
@@ -387,7 +387,7 @@ const processOrder = (paymentMethod) => {
   width: 240px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  min-height: 0; /* Magic fix for flex/grid children */
 }
 
 .category-sidebar h2 {
@@ -490,6 +490,7 @@ const processOrder = (paymentMethod) => {
   width: 320px;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Magic fix for flex/grid children */
 }
 
 .cart {
@@ -500,7 +501,6 @@ const processOrder = (paymentMethod) => {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .cart h2 {
