@@ -5,7 +5,7 @@
       <button class="btn btn-primary" @click="$emit('setView', 'pos')">
         <i class="fas fa-utensils"></i> 前往點餐
       </button>
-      <button class="btn btn-danger">
+      <button class="btn btn-danger" @click="$emit('open-settlement')">
         <i class="fas fa-chart-line"></i> 每日結算
       </button>
     </div>
@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-defineEmits(['setView']);
+defineEmits(['setView', 'open-settlement']);
 </script>
 
 <style scoped>

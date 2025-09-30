@@ -35,24 +35,8 @@
 
 2.  **執行步驟**：
     *   [x] **步驟 1**: 統一 Pinia stores 為 TypeScript。
-        *   [x] 合併 `menu.js` 至 `menu.ts`。
-        *   [x] 刪除 `menu.js`。
-        *   [x] 刪除 `orders.js`。
-        *   [x] 合併 `promotions.js` 至 `promotions.ts`。
-        *   [x] 刪除 `promotions.js`。
-        *   [x] 合併 `reservations.js` 至 `reservations.ts`。
-        *   [x] 刪除 `reservations.js`。
-        *   [x] 合併 `settings.js` 至 `settings.ts`。
-        *   [x] 刪除 `settings.js`。
-        *   [x] 建立 `src/stores/README.md` 並記錄變更。
     *   [x] **步驟 2**: 整理入口檔案與路由。
-        *   [x] 移除 `main.js`，以 `main.ts` 為主。
-        *   [x] 修正 `router/index.ts` 的循環依賴問題。
-        *   [x] 驗證 `router/index.ts` 的元件路徑。
-        *   [x] 建立 `src/router/README.md` 並記錄變更。
     *   [x] **步驟 3**: 整理 `components` 資料夾。
-        *   [x] 合併 `Promotions.vue` 至 `PromotionManagement.vue`。
-        *   [x] 刪除 `Promotions.vue`。
 
 ---
 
@@ -63,35 +47,38 @@
 
 2.  **執行步驟**：
     *   [x] **步驟 1**: 重構 `Login.vue`。
-        *   [x] 建立 `auth.ts` Pinia store 來管理身份驗證狀態。
-        *   [x] 將 `Login.vue` 的不同視圖（登入、忘記密碼、驗證碼、重設密碼）拆分為獨立的子元件 (`LoginForm.vue`, `ForgotPasswordForm.vue`, `VerifyCodeForm.vue`, `ResetPasswordForm.vue`)。
-        *   [x] 將 `Login.vue` 重構為一個控制器，使用動態元件 `<component :is="...">` 來管理不同的視圖。
-        *   [x] 將所有相關元件轉換為 TypeScript。
     *   [x] **步驟 2**: 重構 `Dashboard.vue`。
-        *   [x] 建立 `DashboardHeader.vue` 和 `DashboardSidebar.vue` 子元件。
-        *   [x] 將 `Dashboard.vue` 重構為一個佈局管理器，並將 header 和 sidebar 的內容移至其各自的元件中。
-        *   [x] 將所有相關元件轉換為 TypeScript。
     *   [x] **步驟 3**: 重構 `DashboardHome.vue`。
-        *   [x] 建立 `DashboardHomeHeader.vue`, `DashboardMetrics.vue`, 和 `OrderCard.vue` 子元件。
-        *   [x] 將 `DashboardHome.vue` 重構為一個佈局管理器，並將其內容拆分到各自的子元件中。
-        *   [x] 將所有相關元件轉換為 TypeScript。
     *   [x] **步驟 4**: 重構 `PointOfSale.vue`。
-        *   [x] 建立 `PosHeader.vue`, `CategorySidebar.vue`, `MenuItemCard.vue` 和 `CartSidebar.vue` 子元件。
-        *   [x] 將 `PointOfSale.vue` 重構為一個佈局管理器，並將其內容拆分到各自的子元件中。
-        *   [x] 將所有相關元件轉換為 TypeScript。
     *   [x] **步驟 5**: 重構 `MenuManagement.vue`。
-        *   [x] 建立 `CategoryManagementPanel.vue` 和 `MenuItemsPanel.vue` 子元件。
-        *   [x] 將 `MenuManagement.vue` 重構為一個佈局管理器，並將其內容拆分到各自的子元件中。
-        *   [x] 將所有相關元件轉換為 TypeScript。
     *   [x] **步驟 6**: 重構 `ReservationManagement.vue`。
-        *   [x] 建立 `ReservationHeader.vue`, `CalendarPanel.vue`, `TimelinePanel.vue` 和 `ReservationModal.vue` 子元件。
-        *   [x] 將 `ReservationManagement.vue` 重構為一個佈局管理器，並將其內容拆分到各自的子元件中。
-        *   [x] 將所有相關元件轉換為 TypeScript。
     *   [x] **步驟 7**: 重構 `RevenueAnalysis.vue`。
-        *   [x] 建立 `RevenueChart.vue`, `RevenueStats.vue`, 和 `TopItemsList.vue` 子元件。
-        *   [x] 將 `RevenueAnalysis.vue` 重構為一個佈局管理器，並將其內容拆分到各自的子元件中。
-        *   [x] 將所有相關元件轉換為 TypeScript。
     *   [x] **步驟 8**: 重構 `SystemSettings.vue`。
-        *   [x] 建立 `ReceiptNotesSettings.vue`, `LoginManagement.vue`, 和 `AboutSection.vue` 子元件。
-        *   [x] 將 `SystemSettings.vue` 重構為一個佈局管理器，並將其內容拆分到各自的子元件中。
-        *   [x] 將所有相關元件轉換為 TypeScript。
+
+---
+
+### 任務 3：結算功能增強與數據精準化
+
+1.  **目標**：
+    提升訂單資訊的豐富度，並使結算報告的數據更精準、更具洞察力，確保前端數據流的完整性。
+
+2.  **執行步驟**：
+    *   [x] **步驟 1**: **強化數據核心 (`orders.ts`)**
+        *   [x] 在 `Order` 型別定義中，新增 `paymentMethod` 屬性，用以記錄付款方式 (`'cash' | 'linepay'`)。
+        *   [x] 升級 `addOrder` 函式，使其在建立訂單時能接收 `paymentMethod` 參數。
+
+    *   [x] **步驟 2**: **升級訂單卡片 (`OrderCard.vue`)**
+        *   [x] 在訂單卡片上新增區塊，清楚地展示該筆訂單的付款方式（現金或 LinePay）。
+
+    *   [x] **步驟 3**: **改造結算報告 (`DailySettlementModal.vue`)**
+        *   [x] 將報告中的「付款方式分潤」標題，修改為「結算金額入帳方式」。
+        *   [x] 在報告結構中新增「未結帳總額」(`pendingTotal`) 欄位，並在介面上進行展示。
+        *   [x] 調整報告版面，將「已結帳總額」與「未結帳總額」並列顯示，財務狀況一目了然。
+
+    *   [x] **步驟 4**: **實現精準結算 (`DashboardHome.vue`)**
+        *   [x] 升級 `openSettlementModal` 函式，使其能夠精準計算已完成訂單中，分別由「現金」和「LinePay」支付的總金額。
+        *   [x] 在打開結算視窗時，將準確的 `cashTotal`, `linePayTotal`, 以及 `pendingTotal`（未結帳總額）數據，完整傳遞給結算報告視窗。
+
+    *   [x] **步驟 5**: **修復數據鏈 (`PointOfSale.vue`)**
+        *   [x] 修正 `processOrder` 函式，確保在建立新訂單 (`addOrder`) 時，能夠將顧客選擇的 `paymentMethod` 和其他訂單資訊，以正確的格式傳遞給數據核心。
+        *   [x] 確保了從點餐到結算，整個數據鏈路的完整性與準確性。

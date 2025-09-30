@@ -9,33 +9,70 @@
       </div>
     </div>
     <div v-if="viewMode !== 'topItems'">
-      <RevenueChart :chartData="revenueData[viewMode].chartData" />
-      <RevenueStats :totalRevenue="totalRevenue" :totalOrders="totalOrders" />
+      <RevenueChart :chartData="processedRevenueData.chartData" />
+      <RevenueStats :totalRevenue="processedRevenueData.totalRevenue" :totalOrders="processedRevenueData.totalOrders" />
     </div>
     <TopItemsList v-if="viewMode === 'topItems'" :topItems="topItems" />
+    
+    <div v-if="viewMode !== 'topItems' && processedRevenueData.totalOrders === 0" class="no-data-placeholder">
+      <p>目前尚無營收紀錄，請先完成每日結算。</p>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useRevenueStore } from '../stores/revenue';
 import RevenueChart from './RevenueChart.vue';
 import RevenueStats from './RevenueStats.vue';
 import TopItemsList from './TopItemsList.vue';
 
 const viewMode = ref('7d');
 
-const revenueData = {
-  '7d': {
-    revenue: 46246,
-    orders: 150,
-    chartData: [6423, 7891, 4231, 8888, 9123, 4567, 5123],
-  },
-  '30d': {
-    revenue: 210992,
-    orders: 750,
-    chartData: [6423, 7891, 4231, 8888, 9123, 4567, 5123, 6789, 7123, 8999, 9876, 5432, 5890, 6321, 7890, 5123, 8345, 9456, 4789, 5321, 6890, 7321, 8765, 9876, 5234, 5789, 6123, 7654, 5012, 8123],
-  },
-};
+const revenueStore = useRevenueStore();
+const { revenueHistory } = storeToRefs(revenueStore);
+
+const processedRevenueData = computed(() => {
+  const days = viewMode.value === '7d' ? 7 : 30;
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - days + 1);
+  startDate.setHours(0, 0, 0, 0);
+
+  const filteredRecords = revenueHistory.value.filter(record => {
+    const recordDate = new Date(record.date);
+    return recordDate >= startDate && recordDate <= endDate;
+  });
+
+  const chartData = Array(days).fill(0);
+  const dateLabels = Array(days).fill(null).map((_, i) => {
+      const d = new Date(startDate);
+      d.setDate(d.getDate() + i);
+      return d.toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' });
+  });
+  
+  const dateMap = new Map<string, number>();
+  filteredRecords.forEach(record => {
+    const dateKey = new Date(record.date).toLocaleDateString('zh-TW', { month: '2-digit', day: '2-digit' });
+    dateMap.set(dateKey, (dateMap.get(dateKey) || 0) + record.totalRevenue);
+  });
+
+  dateLabels.forEach((label, i) => {
+      if (dateMap.has(label)) {
+          chartData[i] = dateMap.get(label) ?? 0;
+      }
+  });
+
+  const totalRevenue = filteredRecords.reduce((sum, r) => sum + r.totalRevenue, 0);
+  const totalOrders = filteredRecords.reduce((sum, r) => sum + r.totalOrders, 0);
+
+  return {
+    chartData,
+    totalRevenue,
+    totalOrders,
+  };
+});
 
 const topItems = ref([
   { name: '招牌牛肉麵', quantity: 120 },
@@ -45,8 +82,6 @@ const topItems = ref([
   { name: '珍珠奶茶', quantity: 150 },
 ]);
 
-const totalRevenue = computed(() => revenueData[viewMode.value]?.revenue);
-const totalOrders = computed(() => revenueData[viewMode.value]?.orders);
 </script>
 
 <style scoped>
@@ -54,6 +89,7 @@ const totalOrders = computed(() => revenueData[viewMode.value]?.orders);
   padding: 25px;
   background-color: #f9f9f9;
   border-radius: 15px;
+  position: relative;
 }
 
 .revenue-analysis h2 {
@@ -92,5 +128,19 @@ const totalOrders = computed(() => revenueData[viewMode.value]?.orders);
   background-color: #4eb8d7;
   color: white;
   font-weight: 600;
+}
+
+.no-data-placeholder {
+  text-align: center;
+  padding: 50px;
+  margin-top: 20px;
+  background-color: #fff;
+  border-radius: 10px;
+  border: 1px dashed #ddd;
+}
+
+.no-data-placeholder p {
+  font-size: 18px;
+  color: #888;
 }
 </style>

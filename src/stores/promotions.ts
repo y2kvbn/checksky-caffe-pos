@@ -36,11 +36,11 @@ interface PromotionsState {
 // 3. 預設狀態，加入 singleItemDeal 的預設值
 const defaultState: PromotionsState = {
   singleItemDeal: {
-    enabled: false,
-    itemId: '',
-    itemName: '特定品項',
-    discountPrice: 100,
-    originalPrice: 120,
+    enabled: true,
+    itemId: 'hpt01',
+    itemName: '蕃茄牛奶鍋 (雞肉)',
+    discountPrice: 350,
+    originalPrice: 400,
   },
   spendAndGet: {
     enabled: true,

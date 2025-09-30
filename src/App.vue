@@ -34,7 +34,11 @@ const views = {
 const setView = (view, params = {}) => {
   if (isLoggedIn.value && views[view]) {
     activeComponent.value = views[view];
-    viewProps.value = params; // Pass params as props to the component
+    if (view === 'pos') {
+      viewProps.value = { view: params.view || 'menu' };
+    } else {
+      viewProps.value = params; // Pass params as props to the component
+    }
   } else if (!isLoggedIn.value) {
     activeComponent.value = Login;
     viewProps.value = {};

@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-home">
-    <DashboardHomeHeader @setView="$emit('setView', $event)" />
+    <DashboardHomeHeader @setView="$emit('setView', $event)" @open-settlement="openSettlementModal" />
     <DashboardMetrics />
 
     <!-- Orders Grid -->
@@ -14,6 +14,7 @@
           :key="order.id" 
           :order="order" 
           @openPrintPreview="openPrintPreview"
+          @delete-order="handleDeleteOrder"
         />
       </div>
     </div>
@@ -36,26 +37,51 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Daily Settlement Modal -->
+    <DailySettlementModal 
+      :visible="isSettlementModalVisible"
+      :settlement="settlementData"
+      @close="isSettlementModalVisible = false"
+      @download-image="handleDownloadImage"
+      @archive-and-clear="handleArchiveAndClear"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useOrdersStore } from '../stores/orders';
+import { useOrdersStore, type Order } from '../stores/orders';
+import { useRevenueStore } from '../stores/revenue';
 import { storeToRefs } from 'pinia';
+import html2canvas from 'html2canvas';
 import DashboardHomeHeader from './DashboardHomeHeader.vue';
 import DashboardMetrics from './DashboardMetrics.vue';
 import OrderCard from './OrderCard.vue';
 import PrintReceipt from './PrintReceipt.vue';
+import DailySettlementModal from './DailySettlementModal.vue';
 
 const emit = defineEmits(['setView']);
+
+// --- Store Setup ---
 const ordersStore = useOrdersStore();
-const { orders } = storeToRefs(ordersStore);
+const { orders, pendingRevenue } = storeToRefs(ordersStore); // <-- 引入 pendingRevenue
+const { clearCompletedOrders, deleteOrder } = ordersStore;
 
+const revenueStore = useRevenueStore();
+
+// --- Delete Order Logic ---
+const handleDeleteOrder = (orderId: string) => {
+  if (window.confirm('您確定要刪除這筆訂單嗎？此操作無法復原。')) {
+    deleteOrder(orderId);
+  }
+};
+
+// --- Print Modal Logic ---
 const showPrintModal = ref(false);
-const selectedOrderForPrint = ref<any>(null);
+const selectedOrderForPrint = ref<Order | null>(null);
 
-const openPrintPreview = (order: any) => {
+const openPrintPreview = (order: Order) => {
   selectedOrderForPrint.value = order;
   showPrintModal.value = true;
 };
@@ -68,6 +94,66 @@ const closePrintPreview = () => {
 const handlePrint = () => {
   window.print();
 };
+
+// --- Daily Settlement Logic ---
+const isSettlementModalVisible = ref(false);
+const settlementData = ref({
+  date: '',
+  totalRevenue: 0,
+  totalOrders: 0,
+  cashTotal: 0,
+  linePayTotal: 0,
+  pendingTotal: 0, // <-- 新增 pendingTotal
+});
+
+const openSettlementModal = () => {
+  const completedOrders = orders.value.filter(order => order.status === '已完成');
+  
+  const totalRevenue = completedOrders.reduce((sum, order) => sum + order.total, 0);
+  const totalOrders = completedOrders.length;
+  
+  // 精準計算現金和 LinePay 收入
+  const cashTotal = completedOrders
+    .filter(order => order.paymentMethod === 'cash')
+    .reduce((sum, order) => sum + order.total, 0);
+  
+  const linePayTotal = completedOrders
+    .filter(order => order.paymentMethod === 'linepay')
+    .reduce((sum, order) => sum + order.total, 0);
+    
+  settlementData.value = {
+    date: new Date().toISOString(),
+    totalRevenue,
+    totalOrders,
+    cashTotal,
+    linePayTotal,
+    pendingTotal: pendingRevenue.value, // <-- 傳入未結帳金額
+  };
+  
+  isSettlementModalVisible.value = true;
+};
+
+const handleDownloadImage = () => {
+  const reportElement = document.getElementById('settlement-report');
+  if (reportElement) {
+    html2canvas(reportElement, {
+      useCORS: true,
+      scale: 2, 
+    }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `settlement-report-${new Date().toLocaleDateString('zh-TW')}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.9);
+      link.click();
+    });
+  }
+};
+
+const handleArchiveAndClear = () => {
+  revenueStore.addRevenueRecord(settlementData.value);
+  clearCompletedOrders();
+  isSettlementModalVisible.value = false;
+};
+
 </script>
 
 <style>

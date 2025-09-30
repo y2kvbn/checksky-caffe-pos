@@ -1,15 +1,13 @@
 import { defineStore } from 'pinia';
 import { ref, computed, watch } from 'vue';
-import type { MenuItem } from './menu';
 
 // 1. 訂單項目與訂單的型別定義
 export interface OrderItem {
-  id: string; // 使用 MenuItem 的 id
+  id: string; 
   name: string;
   price: number;
   quantity: number;
-  isGift?: boolean; // 是否為贈品
-  // 移除 item: MenuItem 結構，使型別更扁平
+  isGift?: boolean; 
 }
 
 export interface Order {
@@ -19,13 +17,13 @@ export interface Order {
   timestamp: Date;
   status: '處理中' | '已完成' | '已取消';
   tableNumber?: string;
+  paymentMethod: 'cash' | 'linepay'; // <--- 新增付款方式
 }
 
 // localStorage 的鍵
 export const ORDERS_STORAGE_KEY = 'caffe_pos_orders_state';
 
 export const useOrdersStore = defineStore('orders', () => {
-  // 2. State (使用 ref)
   const orders = ref<Order[]>([]);
 
   // 從 localStorage 初始化 State
@@ -33,10 +31,11 @@ export const useOrdersStore = defineStore('orders', () => {
   if (savedState) {
     try {
       const parsed = JSON.parse(savedState) as Order[];
-      // 將 ISO 字串轉換回 Date 物件
       orders.value = parsed.map(order => ({
         ...order,
         timestamp: new Date(order.timestamp),
+        // 確保舊訂單有預設值
+        paymentMethod: order.paymentMethod || 'cash', 
       }));
     } catch (e) {
       console.error("無法從 localStorage 解析訂單:", e);
@@ -44,7 +43,6 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
-  // 3. Getters (使用 computed)
   const totalRevenue = computed(() => 
     orders.value
       .filter(o => o.status === '已完成')
@@ -59,8 +57,8 @@ export const useOrdersStore = defineStore('orders', () => {
 
   const totalOrdersCount = computed(() => orders.value.length);
 
-  // 4. Actions (函式)
-  function addOrder(newOrder: { items: OrderItem[]; tableNumber?: string }) {
+  // 升級 addOrder 函式以包含 paymentMethod
+  function addOrder(newOrder: { items: OrderItem[]; tableNumber?: string; paymentMethod: 'cash' | 'linepay' }) {
     const total = newOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const orderWithId: Order = {
       ...newOrder,
@@ -79,17 +77,27 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
+  function deleteOrder(orderId: string) {
+    const index = orders.value.findIndex(o => o.id === orderId);
+    if (index !== -1) {
+      orders.value.splice(index, 1);
+    }
+  }
+
   function clearAllOrders() {
     orders.value = [];
   }
+
+  function clearCompletedOrders() {
+    orders.value = orders.value.filter(order => order.status !== '已完成');
+  }
   
-  // 5. 使用 Watcher 自動儲存到 localStorage
   watch(
     orders,
     (newOrders) => {
       localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(newOrders));
     },
-    { deep: true } // 深度監聽以捕捉內部物件的變更
+    { deep: true } 
   );
 
   return {
@@ -99,6 +107,8 @@ export const useOrdersStore = defineStore('orders', () => {
     totalOrdersCount,
     addOrder,
     updateOrderStatus,
+    deleteOrder,
     clearAllOrders,
+    clearCompletedOrders,
   };
 });

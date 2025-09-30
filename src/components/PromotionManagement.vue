@@ -7,20 +7,20 @@
         <div class="card-header">
           <h3>單項優惠價</h3>
           <label class="switch">
-            <input type="checkbox" v-model="singleItemDeal.enabled" @change="updateSingleItemDeal(singleItemDeal)">
+            <input type="checkbox" v-model="singleItemDeal.enabled">
             <span class="slider round"></span>
           </label>
         </div>
         <div class="card-body">
           <p>設定特定品項的優惠價格。</p>
           <div v-if="singleItemDeal.enabled" class="settings">
-            <select v-model="singleItemDeal.itemId" @change="updateSingleItemDeal(singleItemDeal)">
+            <select v-model="singleItemDeal.itemId">
               <option disabled value="">請選擇品項</option>
               <option v-for="item in menuStore.items" :key="item.id" :value="item.id">
                 {{ item.name }} - NT${{ item.price }}
               </option>
             </select>
-            <input type="number" placeholder="優惠價格" v-model.number="singleItemDeal.discountPrice" @input="updateSingleItemDeal(singleItemDeal)">
+            <input type="number" placeholder="優惠價格" v-model.number="singleItemDeal.discountPrice">
           </div>
         </div>
       </div>
@@ -30,15 +30,15 @@
         <div class="card-header">
           <h3>滿額贈送</h3>
           <label class="switch">
-            <input type="checkbox" v-model="spendAndGet.enabled" @change="updateSpendAndGet(spendAndGet)">
+            <input type="checkbox" v-model="spendAndGet.enabled">
             <span class="slider round"></span>
           </label>
         </div>
         <div class="card-body">
           <p>消費滿額即可獲得贈品。</p>
           <div v-if="spendAndGet.enabled" class="settings">
-            <input type="number" placeholder="消費門檻" v-model.number="spendAndGet.threshold" @input="updateSpendAndGet(spendAndGet)">
-            <input type="text" placeholder="贈品名稱" v-model="spendAndGet.giftName" @input="updateSpendAndGet(spendAndGet)">
+            <input type="number" placeholder="消費門檻" v-model.number="spendAndGet.threshold">
+            <input type="text" placeholder="贈品名稱" v-model="spendAndGet.giftName">
           </div>
         </div>
       </div>
@@ -48,15 +48,15 @@
         <div class="card-header">
           <h3>滿額打折</h3>
           <label class="switch">
-            <input type="checkbox" v-model="spendAndDiscount.enabled" @change="updateSpendAndDiscount(spendAndDiscount)">
+            <input type="checkbox" v-model="spendAndDiscount.enabled">
             <span class="slider round"></span>
           </label>
         </div>
         <div class="card-body">
           <p>消費滿額即可享有折扣。</p>
           <div v-if="spendAndDiscount.enabled" class="settings">
-            <input type="number" placeholder="消費門檻" v-model.number="spendAndDiscount.threshold" @input="updateSpendAndDiscount(spendAndDiscount)">
-            <input type="number" placeholder="折扣(例如: 85折請輸入85)" v-model.number="spendAndDiscount.discount" @input="updateSpendAndDiscount(spendAndDiscount)">
+            <input type="number" placeholder="消費門檻" v-model.number="spendAndDiscount.threshold">
+            <input type="number" placeholder="折扣(例如: 85折請輸入85)" v-model.number="spendAndDiscount.discount">
           </div>
         </div>
       </div>
@@ -70,10 +70,12 @@ import { useMenuStore } from '@/stores/menu';
 import { storeToRefs } from 'pinia';
 
 const promotionsStore = usePromotionsStore();
+// storeToRefs makes the state reactive so v-model can work correctly
 const { singleItemDeal, spendAndGet, spendAndDiscount } = storeToRefs(promotionsStore);
-const { updateSingleItemDeal, updateSpendAndGet, updateSpendAndDiscount } = promotionsStore;
 
 const menuStore = useMenuStore();
+
+// No need to import actions if v-model is used directly on reactive state
 
 </script>
 
@@ -94,6 +96,12 @@ const menuStore = useMenuStore();
   background-color: #fff;
   border-radius: 15px;
   box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.promotion-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.12);
 }
 
 .card-header {
@@ -119,17 +127,24 @@ const menuStore = useMenuStore();
 }
 
 .settings {
-    margin-top: 15px;
+    margin-top: 20px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .settings input, .settings select {
-    padding: 10px;
+    padding: 12px;
     border: 1px solid #ddd;
     border-radius: 8px;
     font-size: 16px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.settings input:focus, .settings select:focus {
+    outline: none;
+    border-color: #4eb8d7;
+    box-shadow: 0 0 0 3px rgba(78, 184, 215, 0.2);
 }
 
 /* The switch - the box around the slider */

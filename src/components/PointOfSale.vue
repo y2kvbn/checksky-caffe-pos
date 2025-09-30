@@ -93,7 +93,7 @@ const cartWithPromotions = computed(() => {
     discountedPrice: item.price
   }));
 
-  if (singleItemDeal.value.enabled && singleItemDeal.value.itemId) {
+  if (singleItemDeal.value && singleItemDeal.value.enabled && singleItemDeal.value.itemId) {
     processedCart.forEach(item => {
       if (item.id === singleItemDeal.value.itemId) {
         item.discountedPrice = singleItemDeal.value.discountPrice;
@@ -181,40 +181,40 @@ const handleTableSelected = (table: any) => {
   isTableModalVisible.value = false;
 };
 
-const processOrder = (paymentMethod: string) => {
-  let finalCart = [...cartWithPromotions.value];
-  let appliedPromotion = {
-    singleItem: singleItemDeal.value.enabled ? `特定品項優惠` : '無',
-    spendAndGet: '無',
-    spendAndDiscount: '無',
-  };
+const processOrder = (paymentMethod: 'cash' | 'linepay') => {
+  let finalCartItems = [...cartWithPromotions.value];
 
   if (isGiftThresholdMet.value) {
-    finalCart.push({ name: spendAndGet.value.giftName, price: 0, isGift: true });
-    appliedPromotion.spendAndGet = `滿額贈 ${spendAndGet.value.giftName}`;
+    finalCartItems.push({ 
+      id: `gift-${Date.now()}`,
+      name: spendAndGet.value.giftName, 
+      price: 0, 
+      quantity: 1,
+      isGift: true 
+    });
   }
 
-  if (isDiscountThresholdMet.value) {
-    appliedPromotion.spendAndDiscount = `滿額${spendAndDiscount.value.discount}折`;
-  }
-
-  const newOrder = {
-    items: JSON.parse(JSON.stringify(finalCart)),
-    subtotal: subtotal.value,
+  const orderPayload = {
+    items: finalCartItems.map(item => ({ // 確保 items 符合 OrderItem[] 格式
+      id: item.id,
+      name: item.name,
+      price: item.discountedPrice ?? item.price,
+      quantity: item.quantity,
+      isGift: item.isGift || false,
+    })),
     total: total.value,
     paymentMethod: paymentMethod,
-    appliedPromotion: appliedPromotion,
-    timestamp: new Date().toISOString(),
-    receiptNotes: receiptNotes.value,
-    table: selectedTable.value ? selectedTable.value.name : '未指定' // Add table name to order
+    tableNumber: selectedTable.value ? selectedTable.value.name : undefined
   };
 
-  ordersStore.addOrder(newOrder);
+  ordersStore.addOrder(orderPayload);
+  
   cart.value = [];
   showCheckoutModal.value = false;
-  selectedTable.value = null; // Reset selected table
+  selectedTable.value = null; 
   emit('setView', 'dashboard');
 };
+
 </script>
 
 <style scoped>

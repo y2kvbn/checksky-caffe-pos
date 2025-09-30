@@ -4,43 +4,54 @@
     <DashboardHeader @goToReservations="goToReservations" />
     <DashboardSidebar :activeView="activeView" @setView="activeView = $event" @logout="handleLogout" />
     <main class="main-content">
-      <Suspense>
-        <component :is="views[activeView]" @setView="handleSetView" />
-        <template #fallback>
-          <div>Loading...</div>
-        </template>
-      </Suspense>
+      <!-- 
+        The setView event from DashboardHome is for navigating *outside* the dashboard (e.g., to the POS).
+        It needs to be emitted upwards to the parent component (App.vue), not handled here.
+        The sidebar handles internal view switching by setting activeView directly.
+      -->
+      <div v-if="activeView === 'DashboardHome'">
+        <DashboardHome @setView="$emit('setView', $event)" />
+      </div>
+      <div v-if="activeView === 'MenuManagement'">
+        <MenuManagement />
+      </div>
+      <div v-if="activeView === 'TableManagement'">
+        <TableManagement />
+      </div>
+      <div v-if="activeView === 'RevenueAnalysis'">
+        <RevenueAnalysis />
+      </div>
+      <div v-if="activeView === 'PromotionManagement'">
+        <PromotionManagement />
+      </div>
+      <div v-if="activeView === 'SystemSettings'">
+        <SystemSettings />
+      </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, defineAsyncComponent } from 'vue';
+import { ref } from 'vue';
 import DashboardHeader from './DashboardHeader.vue';
 import DashboardSidebar from './DashboardSidebar.vue';
+import DashboardHome from './DashboardHome.vue';
+import MenuManagement from './MenuManagement.vue';
+import TableManagement from './TableManagement.vue';
+import RevenueAnalysis from './RevenueAnalysis.vue';
+import PromotionManagement from './PromotionManagement.vue';
+import SystemSettings from './SystemSettings.vue';
 
 const emit = defineEmits(['setView', 'logout']);
 
 const activeView = ref('DashboardHome');
 
-const views = shallowRef({
-  DashboardHome: defineAsyncComponent(() => import('./DashboardHome.vue')),
-  MenuManagement: defineAsyncComponent(() => import('./MenuManagement.vue')),
-  TableManagement: defineAsyncComponent(() => import('./TableManagement.vue')),
-  RevenueAnalysis: defineAsyncComponent(() => import('./RevenueAnalysis.vue')),
-  PromotionManagement: defineAsyncComponent(() => import('./PromotionManagement.vue')),
-  SystemSettings: defineAsyncComponent(() => import('./SystemSettings.vue')),
-});
-
 const handleLogout = () => {
   emit('logout');
 };
 
-const handleSetView = (view) => {
-    emit('setView', view);
-};
-
 const goToReservations = () => {
+  // This emits to App.vue to switch to the POS view, with a specific sub-view
   emit('setView', 'pos', { view: 'reservations' });
 };
 </script>
