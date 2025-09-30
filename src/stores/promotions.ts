@@ -4,6 +4,16 @@ import { ref, watch, computed } from 'vue';
 const STORAGE_KEY = '向天泓咖啡廳_優惠設定';
 
 // 1. 為各種優惠活動定義 TypeScript 介面
+
+// 從 promotions.js 移植過來
+export interface SingleItemDeal {
+  enabled: boolean;
+  itemId: string;
+  itemName: string;
+  discountPrice: number;
+  originalPrice: number;
+}
+
 export interface SpendAndGet {
   enabled: boolean;
   threshold: number;
@@ -16,14 +26,22 @@ export interface SpendAndDiscount {
   discount: number; // 例如 85 代表 85 折
 }
 
-// 2. 為整個 store 的 state 定義介面
+// 2. 為整個 store 的 state 定義介面，加入 singleItemDeal
 interface PromotionsState {
+  singleItemDeal: SingleItemDeal;
   spendAndGet: SpendAndGet;
   spendAndDiscount: SpendAndDiscount;
 }
 
-// 3. 預設狀態
+// 3. 預設狀態，加入 singleItemDeal 的預設值
 const defaultState: PromotionsState = {
+  singleItemDeal: {
+    enabled: false,
+    itemId: '',
+    itemName: '特定品項',
+    discountPrice: 100,
+    originalPrice: 120,
+  },
   spendAndGet: {
     enabled: true,
     threshold: 600,
@@ -44,11 +62,15 @@ export const usePromotionsStore = defineStore('promotions', () => {
     try {
       const savedStateJSON = localStorage.getItem(STORAGE_KEY);
       if (savedStateJSON) {
-        // 合併已儲存的設定與預設值，以確保新欄位能正確初始化
         const savedState = JSON.parse(savedStateJSON);
+        // 合併已儲存的設定與預設值，以確保新欄位能正確初始化
         return {
             ...defaultState,
             ...savedState,
+            // 確保深層物件也被正確合併
+            singleItemDeal: { ...defaultState.singleItemDeal, ...(savedState.singleItemDeal || {}) },
+            spendAndGet: { ...defaultState.spendAndGet, ...(savedState.spendAndGet || {}) },
+            spendAndDiscount: { ...defaultState.spendAndDiscount, ...(savedState.spendAndDiscount || {}) },
         };
       }
     } catch (error) {
@@ -70,11 +92,16 @@ export const usePromotionsStore = defineStore('promotions', () => {
     { deep: true } // 深度監聽以捕捉內部物件的變更
   );
 
-  // 6. Getters (使用 computed 導出唯讀狀態)
+  // 6. Getters (使用 computed 導出唯讀狀態)，加入 singleItemDeal
+  const singleItemDeal = computed(() => state.value.singleItemDeal);
   const spendAndGet = computed(() => state.value.spendAndGet);
   const spendAndDiscount = computed(() => state.value.spendAndDiscount);
 
-  // 7. Actions (更新 state)
+  // 7. Actions (更新 state)，加入 updateSingleItemDeal
+  function updateSingleItemDeal(settings: Partial<SingleItemDeal>) {
+    state.value.singleItemDeal = { ...state.value.singleItemDeal, ...settings };
+  }
+
   function updateSpendAndGet(settings: Partial<SpendAndGet>) {
     state.value.spendAndGet = { ...state.value.spendAndGet, ...settings };
   }
@@ -84,8 +111,10 @@ export const usePromotionsStore = defineStore('promotions', () => {
   }
 
   return {
+    singleItemDeal, // 導出
     spendAndGet,
     spendAndDiscount,
+    updateSingleItemDeal, // 導出
     updateSpendAndGet,
     updateSpendAndDiscount,
   };

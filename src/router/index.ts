@@ -2,7 +2,7 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import Login from '../components/Login.vue';
 import NotFound from '../components/NotFound.vue';
-import { pinia } from '../main'; // Import pinia from main.ts
+import { pinia } from '../stores'; // Corrected import path
 
 const routes: Array<RouteRecordRaw> = [
   {

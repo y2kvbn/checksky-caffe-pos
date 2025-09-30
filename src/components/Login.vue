@@ -16,74 +16,21 @@
           </div>
           <h2 class="form-title">{{ formTitle }}</h2>
 
-          <!-- Login Form -->
-          <form v-if="viewState === 'login'" @submit.prevent="handleLogin">
-            <div class="input-group">
-              <i class="fas fa-user-alt"></i>
-              <input type="text" v-model="username" placeholder="帳號" required>
-            </div>
-            <div class="input-group">
-              <i class="fas fa-lock"></i>
-              <input type="password" v-model="password" placeholder="密碼" required>
-            </div>
-            <div v-if="error" class="error-message">{{ error }}</div>
-            <button type="submit" class="btn-login">登入</button>
-            <p class="device-recommendation">建議使用平板設備操作，以享最佳的顯示結果</p>
-             <div class="form-footer">
-              <a href="#" @click.prevent="showForgotPassword" class="forgot-password">忘記密碼?</a>
-              <a href="mailto:service@checksky.com.tw" class="contact-support">聯繫客服</a>
-            </div>
-          </form>
-
-          <!-- Forgot Password Form -->
-          <form v-if="viewState === 'forgotPassword'" @submit.prevent="handleSendCode">
-             <p class="form-instruction">請輸入您的手機號碼以接收驗證碼。</p>
-            <div class="input-group">
-              <i class="fas fa-mobile-alt"></i>
-              <input type="tel" v-model="phoneNumber" placeholder="手機號碼" required>
-            </div>
-            <button type="submit" class="btn-login">發送驗證碼</button>
-             <div class="form-footer">
-                <a href="#" @click.prevent="backToLogin" class="back-link">返回登入</a>
-            </div>
-          </form>
-
-          <!-- Verify Code Form -->
-          <form v-if="viewState === 'enterCode'" @submit.prevent="handleVerifyCode">
-            <p class="form-instruction">我們已發送一組 4 位數驗證碼到您的手機。<br>(模擬驗證碼: 1234)</p>
-            <div class="input-group">
-              <i class="fas fa-key"></i>
-              <input type="text" v-model="verificationCode" placeholder="4位數驗證碼" required maxlength="4">
-            </div>
-            <div v-if="error" class="error-message">{{ error }}</div>
-            <button type="submit" class="btn-login">驗證</button>
-             <div class="form-footer">
-                <a href="#" @click.prevent="backToLogin" class="back-link">返回登入</a>
-            </div>
-          </form>
-
-          <!-- Reset Password Form -->
-          <form v-if="viewState === 'resetPassword'" @submit.prevent="handleResetPassword">
-            <p class="form-instruction">驗證成功！請設定您的新密碼。</p>
-            <div class="input-group">
-              <i class="fas fa-lock"></i>
-              <input type="password" v-model="newPassword" placeholder="新密碼" required>
-            </div>
-            <div class="input-group">
-              <i class="fas fa-lock"></i>
-              <input type="password" v-model="confirmPassword" placeholder="確認新密碼" required>
-            </div>
-            <div v-if="error" class="error-message">{{ error }}</div>
-            <button type="submit" class="btn-login">重設密碼</button>
-             <div class="form-footer">
-                <a href="#" @click.prevent="backToLogin" class="back-link">返回登入</a>
-            </div>
-          </form>
+          <!-- Dynamic Form Component -->
+          <component 
+            :is="currentView.component"
+            @login-success="handleLoginSuccess"
+            @showForgotPassword="viewState = 'forgotPassword'"
+            @showEnterCode="viewState = 'enterCode'"
+            @showResetPassword="viewState = 'resetPassword'"
+            @showSuccess="viewState = 'success'"
+            @backToLogin="viewState = 'login'"
+          />
 
            <!-- Success Message -->
           <div v-if="viewState === 'success'">
             <p class="success-message"><i class="fas fa-check-circle"></i> 密碼已成功更新！</p>
-            <button @click="backToLogin" class="btn-login">返回登入</button>
+            <button @click="viewState = 'login'" class="btn-login">返回登入</button>
           </div>
 
           <!-- Copyright -->
@@ -96,110 +43,34 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue';
+import LoginForm from './LoginForm.vue';
+import ForgotPasswordForm from './ForgotPasswordForm.vue';
+import VerifyCodeForm from './VerifyCodeForm.vue';
+import ResetPasswordForm from './ResetPasswordForm.vue';
 
 // Emits
 const emit = defineEmits(['login-success']);
 
-// State management
-const viewState = ref('login'); // login, forgotPassword, enterCode, resetPassword, success
-const error = ref(null);
+type ViewState = 'login' | 'forgotPassword' | 'enterCode' | 'resetPassword' | 'success';
 
-// Login credentials
-const username = ref('checksky');
-const password = ref('');
-const userDatabase = ref({ // Simulated user database
-  checksky: '1234'
-});
+const viewState = ref<ViewState>('login');
 
-// Forgot password fields
-const phoneNumber = ref('');
-const verificationCode = ref('');
-const newPassword = ref('');
-const confirmPassword = ref('');
-
-// Computed property for form title
-const formTitle = computed(() => {
-  switch (viewState.value) {
-    case 'login': return '點餐系統登入';
-    case 'forgotPassword': return '忘記密碼';
-    case 'enterCode': return '輸入驗證碼';
-    case 'resetPassword': return '設定新密碼';
-    case 'success': return '重設成功';
-    default: return '點餐系統';
-  }
-});
-
-// --- Functions ---
-
-const clearForm = () => {
-    error.value = null;
-    password.value = '';
-    phoneNumber.value = '';
-    verificationCode.value = '';
-    newPassword.value = '';
-    confirmPassword.value = '';
-}
-
-const handleLogin = () => {
-  if (username.value === 'checksky' && password.value === userDatabase.value.checksky) {
-    clearForm();
-    emit('login-success');
-  } else {
-    error.value = '帳號或密碼錯誤，請重新輸入';
-    password.value = '';
-  }
+const viewComponents = {
+  login: { component: LoginForm, title: '點餐系統登入' },
+  forgotPassword: { component: ForgotPasswordForm, title: '忘記密碼' },
+  enterCode: { component: VerifyCodeForm, title: '輸入驗證碼' },
+  resetPassword: { component: ResetPasswordForm, title: '設定新密碼' },
+  success: { component: null, title: '重設成功' }
 };
 
-const showForgotPassword = () => {
-  clearForm();
-  viewState.value = 'forgotPassword';
-};
+const currentView = computed(() => viewComponents[viewState.value]);
+const formTitle = computed(() => currentView.value.title);
 
-const handleSendCode = () => {
-  // Basic phone number validation (example)
-  if (phoneNumber.value.length < 10) {
-      error.value = '請輸入有效的手機號碼';
-      return;
-  }
-  clearForm();
-  // Simulate sending code
-  viewState.value = 'enterCode';
+const handleLoginSuccess = () => {
+  emit('login-success');
 };
-
-const handleVerifyCode = () => {
-  if (verificationCode.value === '1234') { // Simulated verification code
-    clearForm();
-    viewState.value = 'resetPassword';
-  } else {
-    error.value = '驗證碼錯誤';
-    verificationCode.value = '';
-  }
-};
-
-const handleResetPassword = () => {
-  if (newPassword.value !== confirmPassword.value) {
-    error.value = '兩次輸入的密碼不一致';
-    return;
-  }
-  if (newPassword.value.length < 4) {
-      error.value = '密碼長度至少需要4位';
-      return;
-  }
-  
-  // Simulate updating the password in our 'database'
-  userDatabase.value[username.value] = newPassword.value;
-  
-  clearForm();
-  viewState.value = 'success';
-};
-
-const backToLogin = () => {
-  clearForm();
-  viewState.value = 'login';
-};
-
 </script>
 
 <style scoped>
