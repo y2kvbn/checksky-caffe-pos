@@ -5,9 +5,11 @@
       <header class="receipt-header">
         <h1>向天湖咖啡民宿</h1>
         <h2>預結帳單</h2>
-        <p>日期: {{ formatDateTime(order.timestamp) }}</p>
-        <p>單號: {{ order.id.slice(-15) }}</p>
-        <p>桌號: {{ order.tableNumber || '未指定' }}</p>
+        <div class="header-details">
+            <p>日期: {{ formatDateTime(order.timestamp) }}</p>
+            <p>單號: {{ order.id.slice(-15) }}</p>
+            <p>桌號: {{ order.tableNumber || '未指定' }}</p>
+        </div>
       </header>
 
       <!-- 商品列表 -->
@@ -93,35 +95,42 @@ const formatDateTime = (date: Date): string => {
   border: 1px solid #ddd;
 }
 
-.receipt-header {
-  text-align: center;
-  border-bottom: 1px dashed #000;
-  padding-bottom: 15px;
-  margin-bottom: 15px;
-}
-
 .receipt-header h1 {
   font-size: 24px;
   margin: 0;
   font-weight: bold;
+  text-align: center;
 }
 
 .receipt-header h2 {
   font-size: 20px;
   margin: 10px 0;
+  text-align: center;
 }
 
-.receipt-header p {
+.header-details {
+    border-top: 1px dashed #000;
+    padding-top: 15px;
+    margin-top: 15px;
+    text-align: left;
+}
+
+.header-details p {
   margin: 2px 0;
   font-size: 14px;
 }
 
+.items-section {
+    border-top: 1px dashed #000;
+    margin-top: 15px;
+}
+
 .items-section .items-grid.header {
   font-weight: bold;
-  border-top: 1px dashed #000;
   border-bottom: 1px dashed #000;
   padding: 8px 0;
   margin-bottom: 8px;
+  margin-top: 0;
 }
 
 .items-grid, .items-grid-row {

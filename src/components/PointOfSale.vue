@@ -112,9 +112,7 @@ watch(allCategories, (newCategories) => {
   }
 }, { immediate: true });
 
-
 const cartCalculation = computed(() => {
-  // 1. 基本計算
   const subtotal = cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0);
   let totalDiscount = 0;
   const appliedPromotions: { name: string; amount: number }[] = [];
@@ -125,7 +123,6 @@ const cartCalculation = computed(() => {
   const spendAndDiscountDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_DISCOUNT') as SpendAndDiscount[];
   const spendAndGetDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_GET') as SpendAndGet[];
 
-  // 2. 應用單品折扣 (SINGLE_ITEM_DEAL)
   const itemsWithSingleItemDiscount = new Set<string>();
   cart.value.forEach(item => {
     const applicableDeal = singleItemDeals.find(deal => deal.itemId === item.id);
@@ -137,8 +134,6 @@ const cartCalculation = computed(() => {
     }
   });
 
-  // 3. 應用全單折扣 (SPEND_AND_DISCOUNT)
-  // 只計算未被單品折扣影響的商品總額
   const remainingItemsTotal = cart.value
     .filter(item => !itemsWithSingleItemDiscount.has(item.id))
     .reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -147,17 +142,16 @@ const cartCalculation = computed(() => {
   if (spendAndDiscountDeals.length > 0) {
     const applicableDiscount = spendAndDiscountDeals
       .filter(deal => subtotal >= deal.threshold)
-      .sort((a, b) => b.discount - a.discount)[0]; // 取折扣最多的
+      .sort((a, b) => b.discount - a.discount)[0];
 
     if (applicableDiscount) {
-      const discountAmount = Math.round(remainingItemsTotal * (applicableDiscount.discount / 100));
-      totalDiscount += discountAmount;
-      appliedPromotions.push({ name: applicableDiscount.name, amount: discountAmount });
+      const discountAmount = Math.round(remainingItemsTotal * (1 - applicableDiscount.discount / 100));
+      totalDiscount += remainingItemsTotal - discountAmount;
+      appliedPromotions.push({ name: applicableDiscount.name, amount: remainingItemsTotal - discountAmount });
       spendDiscountApplied = true;
     }
   }
 
-  // 4. 應用滿額贈 (SPEND_AND_GET)
   let giftApplied = false;
   if (spendAndGetDeals.length > 0) {
     const applicableGift = spendAndGetDeals
@@ -166,7 +160,6 @@ const cartCalculation = computed(() => {
 
     if (applicableGift) {
       gifts.push(applicableGift.giftName);
-      // 將贈品也視為一個折扣，方便記錄
       if (!appliedPromotions.some(p => p.name === applicableGift.name)) {
           appliedPromotions.push({ name: applicableGift.name, amount: 0 });
       }
@@ -174,7 +167,6 @@ const cartCalculation = computed(() => {
     }
   }
 
-  // 5. 產生促銷提示
   if (!spendDiscountApplied && spendAndDiscountDeals.length > 0) {
     const nextDiscountDeal = spendAndDiscountDeals
       .filter(deal => subtotal < deal.threshold)
@@ -195,7 +187,6 @@ const cartCalculation = computed(() => {
     }
   }
 
-  // 6. 最終計算
   const total = subtotal - totalDiscount;
 
   return {
