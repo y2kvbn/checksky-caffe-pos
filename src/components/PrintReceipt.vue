@@ -1,5 +1,5 @@
 <template>
-  <div class="receipt-A4-size">
+  <div class="receipt-preview-size">
     <div class="receipt-container">
       <!-- 店家資訊 -->
       <header class="receipt-header">
@@ -92,8 +92,8 @@ const formatDateTime = (date: Date): string => {
 </script>
 
 <style scoped>
-/* 模擬 58mm 熱感印紙寬度 */
-.receipt-A4-size {
+/* 模擬 80mm 熱感印紙寬度 */
+.receipt-preview-size {
   background-color: #f0f2f5; /* 預覽時的背景色 */
   padding: 20px;
   display: flex;
@@ -222,14 +222,22 @@ const formatDateTime = (date: Date): string => {
 
 /* 列印時的樣式 */
 @media print {
-  .receipt-A4-size {
-    background-color: white;
+  body, html {
+    margin: 0;
     padding: 0;
   }
+  .receipt-preview-size {
+    background-color: white;
+    padding: 0;
+    margin: 0;
+  }
   .receipt-container {
-    width: 100%;
+    width: 80mm;
+    min-height: 100vh; /* Ensure it takes full height for printing */
     border: none;
     box-shadow: none;
+    padding: 0;
+    margin: 0;
   }
 }
 </style>

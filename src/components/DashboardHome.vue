@@ -67,14 +67,13 @@ const emit = defineEmits(['setView']);
 // --- Store Setup ---
 const ordersStore = useOrdersStore();
 const { orders, pendingRevenue } = storeToRefs(ordersStore);
-const { clearCompletedOrders, deleteOrder } = ordersStore;
 
 const revenueStore = useRevenueStore();
 
 // --- Delete Order Logic ---
 const handleDeleteOrder = (orderId: string) => {
   if (window.confirm('您確定要刪除這筆訂單嗎？此操作無法復原。')) {
-    deleteOrder(orderId);
+    ordersStore.deleteOrder(orderId);
   }
 };
 
@@ -155,7 +154,7 @@ const handleDownloadImage = () => {
 
 const handleArchiveAndClear = () => {
   revenueStore.addRevenueRecord(settlementData.value);
-  clearCompletedOrders();
+  ordersStore.clearCompletedOrders();
   isSettlementModalVisible.value = false;
 };
 
