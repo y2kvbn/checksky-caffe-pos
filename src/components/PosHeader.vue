@@ -6,12 +6,6 @@
     <!-- 中間 Logo -->
     <h1 class="logo">向天泓咖啡廳</h1>
     
-    <!-- 
-      核心改動 1: 
-      - 移除原本包住右側按鈕的多餘 <div>
-      - 讓所有按鈕直接成為 .pos-header (flex container) 的子元素
-      - 這樣它們就能共享 align-items: center 屬性，實現垂直對齊
-    -->
     <div class="header-actions">
       <div class="table-selection-wrapper">
         <div v-if="selectedTable" class="table-display">
@@ -23,8 +17,8 @@
       
       <button class="btn btn-outline" @click="$emit('setPosView', 'reservations')" :class="{ active: posView === 'reservations' }"><span>&#128197;</span> 訂位總覽</button>
       
+      <!-- 核心改動: 移除冗餘的「點餐」按鈕。當處於訂位總覽視圖時，顯示「返回點餐」按鈕 -->
       <button v-if="posView === 'reservations'" class="btn btn-outline" @click="$emit('setPosView', 'menu')"><span>&#127869;</span> 返回點餐</button>
-      <button v-else class="btn btn-outline active" @click="$emit('setPosView', 'menu')"><span>&#127869;</span> 點餐</button>
     </div>
   </header>
 </template>
@@ -46,7 +40,7 @@ defineEmits<{
 .pos-header {
   display: flex;
   justify-content: space-between;
-  align-items: center; /* 這是讓所有子元素垂直置中的關鍵 */
+  align-items: center;
   padding: 10px 30px;
   background-color: var(--tertiary-color);
   border-bottom: 1px solid var(--border-color);
@@ -60,22 +54,18 @@ defineEmits<{
   font-size: 28px;
   font-weight: bold;
   text-shadow: 0 0 5px rgba(78, 184, 215, 0.5);
-  margin: 0; /* 確保 logo 本身沒有多餘的 margin */
+  margin: 0;
 }
 
-/* 
-  核心改動 2: 
-  - 新增 .header-actions 容器
-  - 它也使用 flex 和 align-items: center 來確保內部元素對齊
-*/
 .header-actions {
   display: flex;
-  align-items: center; /* 確保容器內的按鈕和桌號選擇器對齊 */
+  align-items: center;
   gap: 15px;
 }
 
 .btn {
-  padding: 12px 20px; /* 統一內邊距 */
+  /* 核心改動: 將左右 padding 從 20px 增加到 22px，以加寬按鈕 */
+  padding: 12px 22px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -86,8 +76,8 @@ defineEmits<{
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 48px; /* 核心改動 3: 強制設定一個統一的高度 */
-  line-height: 1; /* 確保文字在按鈕內垂直居中 */
+  height: 48px;
+  line-height: 1;
 }
 
 .btn-outline {
@@ -107,11 +97,6 @@ defineEmits<{
     color: white;
 }
 
-/* 
-  核心改動 4: 
-  - 移除 table-selection-wrapper 的邊框和多餘邊距
-  - 讓它看起來更像一個按鈕組
-*/
 .table-selection-wrapper {
   padding: 0;
   margin: 0;
@@ -125,7 +110,7 @@ defineEmits<{
   background-color: #f0f0f0;
   padding: 0 15px;
   border-radius: 8px;
-  height: 48px; /* 與其他按鈕高度一致 */
+  height: 48px;
 }
 
 .table-display span {
