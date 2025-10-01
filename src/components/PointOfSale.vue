@@ -23,7 +23,7 @@
         :cartItems="cartCalculation.items"
         :subtotal="cartCalculation.subtotal"
         :total="cartCalculation.total"
-        :appliedDeals="cartCalculation.appliedDeals"
+        :appliedDeals="cartCalculation.appliedPromotions.map(p => p.name)"
         :gifts="cartCalculation.gifts"
         :promotionHints="cartCalculation.promotionHints"
         :selectedTable="selectedTable" 
@@ -34,12 +34,6 @@
     </div>
 
     <!-- Modals -->
-    <!-- 
-      核心改動: 優化結帳彈窗 (Optimized Checkout Modal)
-      - 放大彈窗尺寸 (Enlarged modal size)
-      - 將按鈕改為大型塊狀點擊區 (Button to large block tappable area)
-      - 嵌入 SVG 圖示 (Embedded SVG icons)
-    -->
     <div v-if="showCheckoutModal" class="checkout-modal">
         <div class="modal-content">
             <h3>選擇付款方式</h3>
@@ -70,7 +64,7 @@
 import { ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useOrdersStore } from '../stores/orders';
-import { useMenuStore } from '../stores/menu';
+import { useMenuStore, type MenuItem } from '../stores/menu';
 import { usePromotionsStore, type SingleItemDeal, type SpendAndDiscount, type SpendAndGet } from '../stores/promotions';
 import SetMealModal from './SetMealModal.vue';
 import ReservationManagement from './ReservationManagement.vue';
@@ -79,6 +73,11 @@ import PosHeader from './PosHeader.vue';
 import CategorySidebar from './CategorySidebar.vue';
 import MenuItemCard from './MenuItemCard.vue';
 import CartSidebar from './CartSidebar.vue';
+
+interface CartItem extends MenuItem {
+  quantity: number;
+  cartItemId: string;
+}
 
 const props = defineProps<{ view: string }>();
 const emit = defineEmits(['setView']);
@@ -92,7 +91,7 @@ const { activePromotions } = storeToRefs(promotionsStore);
 
 const posView = ref(props.view === 'reservations' ? 'reservations' : 'menu');
 const activeCategory = ref('全部');
-const cart = ref<any[]>([]);
+const cart = ref<CartItem[]>([]);
 const showCheckoutModal = ref(false);
 const isSetMealModalVisible = ref(false);
 const isTableModalVisible = ref(false);
@@ -113,92 +112,104 @@ watch(allCategories, (newCategories) => {
   }
 }, { immediate: true });
 
+
 const cartCalculation = computed(() => {
+  // 1. 基本計算
   const subtotal = cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  
-  const appliedDeals: string[] = [];
+  let totalDiscount = 0;
+  const appliedPromotions: { name: string; amount: number }[] = [];
   const gifts: string[] = [];
   const promotionHints: string[] = [];
-  const processedItems = JSON.parse(JSON.stringify(cart.value));
-
-  const singleItemDeals = activePromotions.value.filter(p => p.type === 'SINGLE_ITEM_DEAL') as SingleItemDeal[];
-  if (singleItemDeals.length > 0) {
-    processedItems.forEach(item => {
-      const applicableDeal = singleItemDeals.find(deal => deal.itemId === item.id);
-      if (applicableDeal) {
-        item.discountedPrice = applicableDeal.discountPrice;
-        if (!appliedDeals.includes(applicableDeal.name)) {
-          appliedDeals.push(applicableDeal.name);
-        }
-      }
-    });
-  }
   
-  let total = processedItems.reduce((sum, item) => sum + (item.discountedPrice || item.price) * item.quantity, 0);
-
+  const singleItemDeals = activePromotions.value.filter(p => p.type === 'SINGLE_ITEM_DEAL') as SingleItemDeal[];
   const spendAndDiscountDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_DISCOUNT') as SpendAndDiscount[];
-  let appliedDiscount = false;
+  const spendAndGetDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_GET') as SpendAndGet[];
+
+  // 2. 應用單品折扣 (SINGLE_ITEM_DEAL)
+  const itemsWithSingleItemDiscount = new Set<string>();
+  cart.value.forEach(item => {
+    const applicableDeal = singleItemDeals.find(deal => deal.itemId === item.id);
+    if (applicableDeal) {
+      const discountAmount = (item.price - applicableDeal.discountPrice) * item.quantity;
+      totalDiscount += discountAmount;
+      appliedPromotions.push({ name: applicableDeal.name, amount: discountAmount });
+      itemsWithSingleItemDiscount.add(item.id);
+    }
+  });
+
+  // 3. 應用全單折扣 (SPEND_AND_DISCOUNT)
+  // 只計算未被單品折扣影響的商品總額
+  const remainingItemsTotal = cart.value
+    .filter(item => !itemsWithSingleItemDiscount.has(item.id))
+    .reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  let spendDiscountApplied = false;
   if (spendAndDiscountDeals.length > 0) {
     const applicableDiscount = spendAndDiscountDeals
       .filter(deal => subtotal >= deal.threshold)
-      .sort((a, b) => a.discount - b.discount)[0]; 
-    
+      .sort((a, b) => b.discount - a.discount)[0]; // 取折扣最多的
+
     if (applicableDiscount) {
-      total = Math.round(total * (applicableDiscount.discount / 100));
-      if (!appliedDeals.includes(applicableDiscount.name)) {
-          appliedDeals.push(applicableDiscount.name);
-      }
-      appliedDiscount = true;
+      const discountAmount = Math.round(remainingItemsTotal * (applicableDiscount.discount / 100));
+      totalDiscount += discountAmount;
+      appliedPromotions.push({ name: applicableDiscount.name, amount: discountAmount });
+      spendDiscountApplied = true;
     }
   }
 
-  const spendAndGetDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_GET') as SpendAndGet[];
-  let appliedGift = false;
+  // 4. 應用滿額贈 (SPEND_AND_GET)
+  let giftApplied = false;
   if (spendAndGetDeals.length > 0) {
-      const applicableGift = spendAndGetDeals
-        .filter(deal => subtotal >= deal.threshold)
-        .sort((a, b) => b.threshold - a.threshold)[0];
+    const applicableGift = spendAndGetDeals
+      .filter(deal => subtotal >= deal.threshold)
+      .sort((a, b) => b.threshold - a.threshold)[0];
 
-      if(applicableGift) {
-          gifts.push(applicableGift.giftName);
-          if (!appliedDeals.includes(applicableGift.name)) {
-            appliedDeals.push(applicableGift.name);
-          }
-          appliedGift = true;
+    if (applicableGift) {
+      gifts.push(applicableGift.giftName);
+      // 將贈品也視為一個折扣，方便記錄
+      if (!appliedPromotions.some(p => p.name === applicableGift.name)) {
+          appliedPromotions.push({ name: applicableGift.name, amount: 0 });
       }
-  }
-  
-  if (!appliedDiscount && spendAndDiscountDeals.length > 0) {
-      const nextDiscountDeal = spendAndDiscountDeals
-          .filter(deal => subtotal < deal.threshold)
-          .sort((a, b) => a.threshold - b.threshold)[0];
-      if (nextDiscountDeal) {
-          const difference = nextDiscountDeal.threshold - subtotal;
-          promotionHints.push(`再消費 NT$${difference} 即可享有「${nextDiscountDeal.name}」！`);
-      }
+      giftApplied = true;
+    }
   }
 
-  if (!appliedGift && spendAndGetDeals.length > 0) {
-      const nextGiftDeal = spendAndGetDeals
-          .filter(deal => subtotal < deal.threshold)
-          .sort((a, b) => a.threshold - b.threshold)[0];
-      if (nextGiftDeal) {
-          const difference = nextGiftDeal.threshold - subtotal;
-          promotionHints.push(`再消費 NT$${difference} 即可獲得「${nextGiftDeal.giftName}」！`);
-      }
+  // 5. 產生促銷提示
+  if (!spendDiscountApplied && spendAndDiscountDeals.length > 0) {
+    const nextDiscountDeal = spendAndDiscountDeals
+      .filter(deal => subtotal < deal.threshold)
+      .sort((a, b) => a.threshold - b.threshold)[0];
+    if (nextDiscountDeal) {
+      const difference = nextDiscountDeal.threshold - subtotal;
+      promotionHints.push(`再消費 NT$${difference} 即可享有「${nextDiscountDeal.name}」！`);
+    }
   }
+
+  if (!giftApplied && spendAndGetDeals.length > 0) {
+    const nextGiftDeal = spendAndGetDeals
+      .filter(deal => subtotal < deal.threshold)
+      .sort((a, b) => a.threshold - b.threshold)[0];
+    if (nextGiftDeal) {
+      const difference = nextGiftDeal.threshold - subtotal;
+      promotionHints.push(`再消費 NT$${difference} 即可獲得「${nextGiftDeal.giftName}」！`);
+    }
+  }
+
+  // 6. 最終計算
+  const total = subtotal - totalDiscount;
 
   return {
-    items: processedItems,
+    items: cart.value,
     subtotal: Math.round(subtotal),
-    total: total, 
-    appliedDeals,
+    total: Math.round(total),
+    discount: Math.round(totalDiscount),
+    appliedPromotions,
     gifts,
-    promotionHints
+    promotionHints,
   };
 });
 
-const addToCart = (item: any) => {
+const addToCart = (item: MenuItem) => {
   if (item.isSetMeal) {
     selectedSetMeal.value = item;
     isSetMealModalVisible.value = true;
@@ -212,7 +223,7 @@ const addToCart = (item: any) => {
   }
 };
 
-const handleSetMealConfirm = (mealPackage: any[]) => {
+const handleSetMealConfirm = (mealPackage: MenuItem[]) => {
   mealPackage.forEach(item => {
     const existingItem = cart.value.find(cartItem => cartItem.id === item.id);
     if (existingItem) {
@@ -224,20 +235,28 @@ const handleSetMealConfirm = (mealPackage: any[]) => {
   isSetMealModalVisible.value = false;
 };
 
-const increaseQuantity = (item: any) => {
-  item.quantity++;
+const increaseQuantity = (item: CartItem) => {
+  const cartItem = cart.value.find(i => i.cartItemId === item.cartItemId);
+  if (cartItem) {
+    cartItem.quantity++;
+  }
 };
 
-const decreaseQuantity = (item: any) => {
-  item.quantity--;
-  if (item.quantity === 0) {
-    cart.value = cart.value.filter(cartItem => cartItem.cartItemId !== item.cartItemId);
+const decreaseQuantity = (item: CartItem) => {
+  const cartItem = cart.value.find(i => i.cartItemId === item.cartItemId);
+  if (cartItem) {
+    cartItem.quantity--;
+    if (cartItem.quantity === 0) {
+      cart.value = cart.value.filter(i => i.cartItemId !== item.cartItemId);
+    }
   }
 };
 
 const checkout = () => {
   if (cart.value.length > 0 && selectedTable.value) {
     showCheckoutModal.value = true;
+  } else if (cart.value.length === 0) {
+    alert("購物車是空的！");
   } else {
     alert("請先選擇桌號再進行結帳。");
   }
@@ -249,17 +268,21 @@ const handleTableSelected = (table: any) => {
 };
 
 const processOrder = (paymentMethod: 'cash' | 'linepay') => {
-  const { items, total, gifts } = cartCalculation.value;
+  const { items, subtotal, total, discount, appliedPromotions, gifts } = cartCalculation.value;
 
   let finalCartItems = [...items];
-
   gifts.forEach(giftName => {
+    const giftItem = menuItems.value.find(item => item.name === giftName);
     finalCartItems.push({ 
-      id: `gift-${Date.now()}`,
+      id: giftItem ? giftItem.id : `gift-${Date.now()}`,
       name: giftName, 
       price: 0, 
       quantity: 1,
-      isGift: true 
+      cartItemId: `cart-item-${cartIdCounter++}`,
+      category: '贈品',
+      inStock: true,
+      isSetMeal: false,
+      isGift: true,
     });
   });
 
@@ -267,11 +290,14 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
     items: finalCartItems.map(item => ({
       id: item.id,
       name: item.name,
-      price: item.discountedPrice ?? item.price,
+      price: item.price,
       quantity: item.quantity,
       isGift: item.isGift || false,
     })),
-    total: total,
+    subtotal,
+    discount,
+    total,
+    appliedPromotions,
     paymentMethod: paymentMethod,
     tableNumber: selectedTable.value ? selectedTable.value.name : undefined
   };
@@ -316,7 +342,7 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
   overflow-y: auto;
 }
 
-.single-column-layout>.main-content {
+.single-column-layout > .main-content {
   grid-column: 1 / -1;
 }
 

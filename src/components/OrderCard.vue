@@ -1,7 +1,7 @@
 <template>
   <div class="order-card" :class="`status-${order.status.toLowerCase()}`">
     <div class="order-card-header">
-      <span class="order-id">訂單 #{{ order.id.slice(-6) }}</span>
+      <span class="order-id">訂單 #{{ formattedOrderIndex }}</span>
       <button class="btn-delete" @click.stop="$emit('delete-order', order.id)">
         <i class="fas fa-trash-alt"></i>
       </button>
@@ -33,16 +33,22 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { Order } from '../stores/orders';
 import { useOrdersStore } from '../stores/orders';
 
 const props = defineProps<{ 
-  order: Order 
+  order: Order,
+  orderIndex: number
 }>();
 
 const emit = defineEmits(['openPrintPreview', 'delete-order']);
 
 const ordersStore = useOrdersStore();
+
+const formattedOrderIndex = computed(() => {
+  return (props.orderIndex + 1).toString().padStart(3, '0');
+});
 
 const formatTime = (date: Date) => {
   return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });

@@ -10,14 +10,18 @@ export interface OrderItem {
   isGift?: boolean; 
 }
 
+// 擴充後的 Order 介面
 export interface Order {
   id: string;
   items: OrderItem[];
-  total: number;
+  subtotal: number; // 小計 (折扣前)
+  discount: number; // 折扣金額
+  total: number; // 最終總計
+  appliedPromotions: { name: string; amount: number }[]; // 套用的折扣
   timestamp: Date;
   status: '處理中' | '已完成' | '已取消';
   tableNumber?: string;
-  paymentMethod: 'cash' | 'linepay'; // <--- 新增付款方式
+  paymentMethod: 'cash' | 'linepay';
 }
 
 // localStorage 的鍵
@@ -34,8 +38,11 @@ export const useOrdersStore = defineStore('orders', () => {
       orders.value = parsed.map(order => ({
         ...order,
         timestamp: new Date(order.timestamp),
+        paymentMethod: order.paymentMethod || 'cash',
         // 確保舊訂單有預設值
-        paymentMethod: order.paymentMethod || 'cash', 
+        subtotal: order.subtotal || order.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        discount: order.discount || 0,
+        appliedPromotions: order.appliedPromotions || [],
       }));
     } catch (e) {
       console.error("無法從 localStorage 解析訂單:", e);
@@ -57,14 +64,24 @@ export const useOrdersStore = defineStore('orders', () => {
 
   const totalOrdersCount = computed(() => orders.value.length);
 
-  // 升級 addOrder 函式以包含 paymentMethod
-  function addOrder(newOrder: { items: OrderItem[]; tableNumber?: string; paymentMethod: 'cash' | 'linepay' }) {
-    const total = newOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // 升級 addOrder 函式以處理折扣
+  function addOrder(newOrder: { 
+    items: OrderItem[]; 
+    tableNumber?: string; 
+    paymentMethod: 'cash' | 'linepay';
+    appliedPromotions: { name: string; amount: number }[];
+  }) {
+    const subtotal = newOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const discount = newOrder.appliedPromotions.reduce((sum, promo) => sum + promo.amount, 0);
+    const total = subtotal - discount;
+
     const orderWithId: Order = {
       ...newOrder,
       id: `order-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       timestamp: new Date(),
       status: '處理中',
+      subtotal,
+      discount,
       total,
     };
     orders.value.unshift(orderWithId);

@@ -29,7 +29,7 @@ export const useMenuStore = defineStore('menu', () => {
     '無咖啡因飲品': 'https://img.freepik.com/premium-photo/glass-cold-brew-coffee-beans-table-against-light-background_1235831-118571.jpg',
     '甜點': 'https://img.freepik.com/free-photo/delicious-cake-stand_23-2150797776.jpg',
     '炸物': 'https://img.freepik.com/free-photo/fast-food-restaurant-table_7939-2830.jpg',
-    '加點': 'https://img.freepik.com/free-photo/steamed-rice-bowl_1339-1663.jpg'
+    '加點': 'https://file.phew.tw/content/article/web_pic_2021_07_20_14_41_03.jpeg'
   };
 
   // 來自 menu.js：使用原始的菜單資料，並套用 MenuItem 型別

@@ -10,9 +10,10 @@
       </div>
       <div v-else class="orders-grid">
         <OrderCard 
-          v-for="order in orders" 
+          v-for="(order, index) in orders" 
           :key="order.id" 
           :order="order" 
+          :orderIndex="index"
           @openPrintPreview="openPrintPreview"
           @delete-order="handleDeleteOrder"
         />
