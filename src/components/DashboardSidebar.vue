@@ -7,7 +7,7 @@
         <li :class="{ active: activeView === 'MenuManagement' }" @click="$emit('setView', 'MenuManagement')"><a href="#"><span>&#127869;</span> 菜單管理</a></li>
         <li :class="{ active: activeView === 'TableManagement' }" @click="$emit('setView', 'TableManagement')"><a href="#"><span>&#129681;</span> 桌號管理</a></li>
         <li :class="{ active: activeView === 'RevenueAnalysis' }" @click="$emit('setView', 'RevenueAnalysis')"><a href="#"><span>&#128202;</span> 營收分析</a></li>
-        <li :class="{ active: activeView === 'Promotions' }" @click="$emit('setView', 'Promotions')"><a href="#"><span>&#127991;</span> 優惠活動</a></li>
+        <li :class="{ active: activeView === 'PromotionManagement' }" @click="$emit('setView', 'PromotionManagement')"><a href="#"><span>&#127991;</span> 優惠活動</a></li>
         <li :class="{ active: activeView === 'SystemSettings' }" @click="$emit('setView', 'SystemSettings')"><a href="#"><span>&#9881;</span> 系統設定</a></li>
       </ul>
     </nav>

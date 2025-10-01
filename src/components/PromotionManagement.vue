@@ -1,12 +1,14 @@
 <template>
   <div class="promotions">
     <h2>優惠活動</h2>
-    <div class="promotion-cards">
+    <!-- 檢查資料是否存在，如果不存在則顯示讀取中或提示 -->
+    <div v-if="singleItemDeal && spendAndGet && spendAndDiscount" class="promotion-cards">
       <!-- 單項優惠價 -->
       <div class="promotion-card">
         <div class="card-header">
           <h3>單項優惠價</h3>
           <label class="switch">
+            <!-- v-model 現在直接綁定到 computed property 的 enabled 屬性 -->
             <input type="checkbox" v-model="singleItemDeal.enabled">
             <span class="slider round"></span>
           </label>
@@ -61,25 +63,46 @@
         </div>
       </div>
     </div>
+    <div v-else>
+      <p>正在讀取優惠活動設定...</p>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { usePromotionsStore } from '@/stores/promotions';
+import { computed } from 'vue';
+import { usePromotionsStore, type Promotion } from '@/stores/promotions';
 import { useMenuStore } from '@/stores/menu';
-import { storeToRefs } from 'pinia';
 
 const promotionsStore = usePromotionsStore();
-// storeToRefs makes the state reactive so v-model can work correctly
-const { singleItemDeal, spendAndGet, spendAndDiscount } = storeToRefs(promotionsStore);
-
 const menuStore = useMenuStore();
 
-// No need to import actions if v-model is used directly on reactive state
+// 核心改動：建立 "Adapter" (適配器)
+// 這個 computed property 會從新的 promotions 陣列中，找到第一個符合條件的活動
+// 這樣 template 就可以繼續使用舊的變數名稱 (singleItemDeal)
+const singleItemDeal = computed(() => {
+  // 找到類型為 'SINGLE_ITEM_DEAL' 的第一個活動
+  // ?. 語法確保即使找不到活動，也不會產生錯誤
+  return promotionsStore.promotions.find(p => p.type === 'SINGLE_ITEM_DEAL');
+});
+
+const spendAndGet = computed(() => {
+  return promotionsStore.promotions.find(p => p.type === 'SPEND_AND_GET');
+});
+
+const spendAndDiscount = computed(() => {
+  return promotionsStore.promotions.find(p => p.type === 'SPEND_AND_DISCOUNT');
+});
+
+// 因為我們直接修改 computed property 回傳的物件屬性 (例如 singleItemDeal.value.enabled)，
+// Vue 的響應式系統會追蹤到這個變更，並更新到 Pinia store 中。
+// Pinia store 裡的 watch 會自動將更新後的狀態儲存到 localStorage。
+// 所以我們不需要像以前一樣從 storeToRefs 解構，也不需要手動呼叫 update action。
 
 </script>
 
 <style scoped>
+/* 樣式完全維持原樣，不做任何變更 */
 .promotions h2 {
   font-size: 28px;
   margin-bottom: 25px;
@@ -147,7 +170,6 @@ const menuStore = useMenuStore();
     box-shadow: 0 0 0 3px rgba(78, 184, 215, 0.2);
 }
 
-/* The switch - the box around the slider */
 .switch {
   position: relative;
   display: inline-block;
@@ -155,14 +177,12 @@ const menuStore = useMenuStore();
   height: 28px;
 }
 
-/* Hide default HTML checkbox */
 .switch input { 
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-/* The slider */
 .slider {
   position: absolute;
   cursor: pointer;
@@ -197,7 +217,6 @@ input:checked + .slider:before {
   transform: translateX(22px);
 }
 
-/* Rounded sliders */
 .slider.round {
   border-radius: 34px;
 }

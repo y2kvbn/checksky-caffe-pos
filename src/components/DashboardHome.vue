@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-home">
-    <DashboardHomeHeader @setView="$emit('setView', $event)" @open-settlement="openSettlementModal" />
+    <DashboardHomeHeader />
     <DashboardMetrics />
 
     <!-- Orders Grid -->
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, defineExpose } from 'vue'; // <-- Import defineExpose
 import { useOrdersStore, type Order } from '../stores/orders';
 import { useRevenueStore } from '../stores/revenue';
 import { storeToRefs } from 'pinia';
@@ -65,7 +65,7 @@ const emit = defineEmits(['setView']);
 
 // --- Store Setup ---
 const ordersStore = useOrdersStore();
-const { orders, pendingRevenue } = storeToRefs(ordersStore); // <-- 引入 pendingRevenue
+const { orders, pendingRevenue } = storeToRefs(ordersStore);
 const { clearCompletedOrders, deleteOrder } = ordersStore;
 
 const revenueStore = useRevenueStore();
@@ -103,7 +103,7 @@ const settlementData = ref({
   totalOrders: 0,
   cashTotal: 0,
   linePayTotal: 0,
-  pendingTotal: 0, // <-- 新增 pendingTotal
+  pendingTotal: 0,
 });
 
 const openSettlementModal = () => {
@@ -112,7 +112,6 @@ const openSettlementModal = () => {
   const totalRevenue = completedOrders.reduce((sum, order) => sum + order.total, 0);
   const totalOrders = completedOrders.length;
   
-  // 精準計算現金和 LinePay 收入
   const cashTotal = completedOrders
     .filter(order => order.paymentMethod === 'cash')
     .reduce((sum, order) => sum + order.total, 0);
@@ -127,11 +126,16 @@ const openSettlementModal = () => {
     totalOrders,
     cashTotal,
     linePayTotal,
-    pendingTotal: pendingRevenue.value, // <-- 傳入未結帳金額
+    pendingTotal: pendingRevenue.value,
   };
   
   isSettlementModalVisible.value = true;
 };
+
+// Expose the function to be called by the parent
+defineExpose({
+  openSettlementModal,
+});
 
 const handleDownloadImage = () => {
   const reportElement = document.getElementById('settlement-report');

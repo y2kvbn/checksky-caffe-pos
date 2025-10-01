@@ -1,121 +1,154 @@
 import { defineStore } from 'pinia';
 import { ref, watch, computed } from 'vue';
+import { v4 as uuidv4 } from 'uuid';
 
-const STORAGE_KEY = '向天泓咖啡廳_優惠設定';
+const STORAGE_KEY = '向天泓咖啡廳_優惠設定_v2';
 
-// 1. 為各種優惠活動定義 TypeScript 介面
+// 1. 定義優惠活動的類型
+export type PromotionType = 'SINGLE_ITEM_DEAL' | 'SPEND_AND_DISCOUNT' | 'SPEND_AND_GET';
 
-// 從 promotions.js 移植過來
-export interface SingleItemDeal {
+// 2. 定義每種優惠活動的具體結構
+export interface BasePromotion {
+  id: string;
   enabled: boolean;
-  itemId: string;
-  itemName: string;
-  discountPrice: number;
-  originalPrice: number;
+  name: string; // 活動名稱，例如 "主廚推薦特餐"
+  type: PromotionType;
 }
 
-export interface SpendAndGet {
-  enabled: boolean;
-  threshold: number;
-  giftName: string;
+export interface SingleItemDeal extends BasePromotion {
+  type: 'SINGLE_ITEM_DEAL';
+  itemId: string; // 商品 ID
+  discountPrice: number; // 折扣後的價格
 }
 
-export interface SpendAndDiscount {
-  enabled: boolean;
-  threshold: number;
-  discount: number; // 例如 85 代表 85 折
+export interface SpendAndDiscount extends BasePromotion {
+  type: 'SPEND_AND_DISCOUNT';
+  threshold: number; // 消費門檻
+  discount: number; // 折扣百分比 (例如 85 代表 85 折)
 }
 
-// 2. 為整個 store 的 state 定義介面，加入 singleItemDeal
+export interface SpendAndGet extends BasePromotion {
+  type: 'SPEND_AND_GET';
+  threshold: number; // 消費門檻
+  giftName: string; // 贈品名稱
+}
+
+// 3. 使用聯合類型來代表任何一種可能的優惠活動
+export type Promotion = SingleItemDeal | SpendAndDiscount | SpendAndGet;
+
+// 4. State 的結構改為一個優惠活動的陣列
 interface PromotionsState {
-  singleItemDeal: SingleItemDeal;
-  spendAndGet: SpendAndGet;
-  spendAndDiscount: SpendAndDiscount;
+  promotions: Promotion[];
 }
 
-// 3. 預設狀態，加入 singleItemDeal 的預設值
+// 5. 預設狀態，現在是一個包含多個活動的陣列
 const defaultState: PromotionsState = {
-  singleItemDeal: {
-    enabled: true,
-    itemId: 'hpt01',
-    itemName: '蕃茄牛奶鍋 (雞肉)',
-    discountPrice: 350,
-    originalPrice: 400,
-  },
-  spendAndGet: {
-    enabled: true,
-    threshold: 600,
-    giftName: '主廚精選甜點一份',
-  },
-  spendAndDiscount: {
-    enabled: true,
-    threshold: 1200,
-    discount: 88, // 88 折
-  },
+  promotions: [
+    {
+      id: 'promo-1',
+      enabled: true,
+      name: '蕃茄牛奶鍋特價',
+      type: 'SINGLE_ITEM_DEAL',
+      itemId: 'hpt01', // 假設這是蕃茄牛奶鍋(雞肉)的ID
+      discountPrice: 350,
+    },
+    {
+      id: 'promo-2',
+      enabled: true,
+      name: '滿千八八折',
+      type: 'SPEND_AND_DISCOUNT',
+      threshold: 1000,
+      discount: 88, // 88 折
+    },
+    {
+      id: 'promo-3',
+      enabled: false, // 預設關閉
+      name: '滿600送甜點',
+      type: 'SPEND_AND_GET',
+      threshold: 600,
+      giftName: '主廚精選甜點一份',
+    },
+  ],
 };
 
 export const usePromotionsStore = defineStore('promotions', () => {
-  // 4. 單一的 ref 管理 state，並從 localStorage 初始化
-  const state = ref<PromotionsState>(loadState());
+  // 6. State 現在是一個優惠活動的 Ref 陣列
+  const promotions = ref<Promotion[]>(loadState());
 
-  function loadState(): PromotionsState {
+  function loadState(): Promotion[] {
     try {
       const savedStateJSON = localStorage.getItem(STORAGE_KEY);
       if (savedStateJSON) {
-        const savedState = JSON.parse(savedStateJSON);
-        // 合併已儲存的設定與預設值，以確保新欄位能正確初始化
-        return {
-            ...defaultState,
-            ...savedState,
-            // 確保深層物件也被正確合併
-            singleItemDeal: { ...defaultState.singleItemDeal, ...(savedState.singleItemDeal || {}) },
-            spendAndGet: { ...defaultState.spendAndGet, ...(savedState.spendAndGet || {}) },
-            spendAndDiscount: { ...defaultState.spendAndDiscount, ...(savedState.spendAndDiscount || {}) },
-        };
+        // 簡單地解析回來即可，因為我們有預設值
+        return JSON.parse(savedStateJSON);
       }
     } catch (error) {
       console.error("無法讀取優惠設定:", error);
     }
-    return defaultState;
+    return defaultState.promotions;
   }
 
-  // 5. 使用 Watcher 自動儲存到 localStorage
+  // 7. Watcher 自動儲存到 localStorage
   watch(
-    state,
-    (newState) => {
+    promotions,
+    (newPromotions) => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newPromotions));
       } catch (error) {
         console.error("無法儲存優惠設定:", error);
       }
     },
-    { deep: true } // 深度監聽以捕捉內部物件的變更
+    { deep: true }
   );
 
-  // 6. Getters (使用 computed 導出唯讀狀態)，加入 singleItemDeal
-  const singleItemDeal = computed(() => state.value.singleItemDeal);
-  const spendAndGet = computed(() => state.value.spendAndGet);
-  const spendAndDiscount = computed(() => state.value.spendAndDiscount);
+  // 8. Getters / Computed Properties
+  const allPromotions = computed(() => promotions.value);
+  const activePromotions = computed(() => promotions.value.filter(p => p.enabled));
 
-  // 7. Actions (更新 state)，加入 updateSingleItemDeal
-  function updateSingleItemDeal(settings: Partial<SingleItemDeal>) {
-    state.value.singleItemDeal = { ...state.value.singleItemDeal, ...settings };
+  function getPromotionById(id: string): Promotion | undefined {
+    return promotions.value.find(p => p.id === id);
   }
 
-  function updateSpendAndGet(settings: Partial<SpendAndGet>) {
-    state.value.spendAndGet = { ...state.value.spendAndGet, ...settings };
+  // 9. Actions - 新的管理功能
+  function addPromotion(newPromoData: Omit<Promotion, 'id'>) {
+    const newPromotion: Promotion = {
+      ...newPromoData,
+      id: uuidv4(), // 使用 uuid 產生唯一的 ID
+    } as Promotion;
+    promotions.value.push(newPromotion);
   }
 
-  function updateSpendAndDiscount(settings: Partial<SpendAndDiscount>) {
-    state.value.spendAndDiscount = { ...state.value.spendAndDiscount, ...settings };
+  function updatePromotion(id: string, updates: Partial<Promotion>) {
+    const index = promotions.value.findIndex(p => p.id === id);
+    if (index !== -1) {
+      // 確保 id 和 type 不被覆蓋
+      const { id: originalId, type: originalType, ...restOfUpdates } = updates;
+      promotions.value[index] = { 
+        ...promotions.value[index], 
+        ...restOfUpdates 
+      };
+    }
   }
 
+  function deletePromotion(id: string) {
+    promotions.value = promotions.value.filter(p => p.id !== id);
+  }
+
+  function togglePromotion(id: string) {
+    const promotion = getPromotionById(id);
+    if (promotion) {
+      promotion.enabled = !promotion.enabled;
+    }
+  }
+
+  // 10. 導出所有需要的狀態和函式
   return {
-    singleItemDeal, // 導出
-    spendAndGet,
-    spendAndDiscount,
-    updateSingleItemDeal, // 導出
-    updateSpendAndGet,
-    updateSpendAndDiscount,
+    promotions: allPromotions, // 導出 allPromotions 而不是原始的 ref
+    activePromotions,
+    getPromotionById,
+    addPromotion,
+    updatePromotion,
+    deletePromotion,
+    togglePromotion,
   };
 });

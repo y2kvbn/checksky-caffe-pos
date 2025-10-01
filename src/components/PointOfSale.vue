@@ -1,6 +1,12 @@
 <template>
   <div class="pos-container">
-    <PosHeader :posView="posView" @setView="$emit('setView', $event)" @setPosView="posView = $event" />
+    <PosHeader 
+      :posView="posView" 
+      :selectedTable="selectedTable"
+      @setView="$emit('setView', $event)" 
+      @setPosView="posView = $event"
+      @openTableModal="isTableModalVisible = true" 
+    />
 
     <div class="pos-main" :class="{ 'single-column-layout': posView === 'reservations' }">
       <CategorySidebar v-if="posView === 'menu'" :activeCategory="activeCategory" @update:activeCategory="activeCategory = $event" />
@@ -12,10 +18,25 @@
         <ReservationManagement v-else />
       </main>
 
-      <CartSidebar v-if="posView === 'menu'" :cart="cart" :selectedTable="selectedTable" @openTableModal="isTableModalVisible = true" @decreaseQuantity="decreaseQuantity" @increaseQuantity="increaseQuantity" @checkout="checkout" />
+      <!-- 
+        核心改動 1: 傳遞新的 prop `promotionHints` 給 CartSidebar 
+      -->
+      <CartSidebar 
+        v-if="posView === 'menu'" 
+        :cartItems="cartCalculation.items"
+        :subtotal="cartCalculation.subtotal"
+        :total="cartCalculation.total"
+        :appliedDeals="cartCalculation.appliedDeals"
+        :gifts="cartCalculation.gifts"
+        :promotionHints="cartCalculation.promotionHints"
+        :selectedTable="selectedTable" 
+        @decreaseQuantity="decreaseQuantity" 
+        @increaseQuantity="increaseQuantity" 
+        @checkout="checkout" 
+      />
     </div>
 
-    <!-- Checkout Modal -->
+    <!-- Modals -->
     <div v-if="showCheckoutModal" class="checkout-modal">
         <div class="modal-content">
             <h3>選擇付款方式</h3>
@@ -26,11 +47,7 @@
             <button class="btn btn-secondary" @click="showCheckoutModal = false">取消</button>
         </div>
     </div>
-
-    <!-- Set Meal Configuration Modal -->
     <SetMealModal :visible="isSetMealModalVisible" :set-meal="selectedSetMeal" @close="isSetMealModalVisible = false" @confirm="handleSetMealConfirm" />
-
-    <!-- Select Table Modal -->
     <SelectTableModal :is-visible="isTableModalVisible" @close="isTableModalVisible = false" @select-table="handleTableSelected" />
   </div>
 </template>
@@ -40,9 +57,7 @@ import { ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useOrdersStore } from '../stores/orders';
 import { useMenuStore } from '../stores/menu';
-import { usePromotionsStore } from '../stores/promotions';
-import { useSettingsStore } from '../stores/settings';
-import { useTablesStore } from '../stores/tables';
+import { usePromotionsStore, type SingleItemDeal, type SpendAndDiscount, type SpendAndGet } from '../stores/promotions';
 import SetMealModal from './SetMealModal.vue';
 import ReservationManagement from './ReservationManagement.vue';
 import SelectTableModal from './SelectTableModal.vue';
@@ -57,12 +72,9 @@ const emit = defineEmits(['setView']);
 const ordersStore = useOrdersStore();
 const menuStore = useMenuStore();
 const promotionsStore = usePromotionsStore();
-const settingsStore = useSettingsStore();
-const tablesStore = useTablesStore(); // eslint-disable-line
 
 const { items: menuItems, allCategories } = storeToRefs(menuStore);
-const { singleItemDeal, spendAndGet, spendAndDiscount } = storeToRefs(promotionsStore);
-const { receiptNotes } = storeToRefs(settingsStore);
+const { activePromotions } = storeToRefs(promotionsStore);
 
 const posView = ref(props.view === 'reservations' ? 'reservations' : 'menu');
 const activeCategory = ref('全部');
@@ -87,49 +99,107 @@ watch(allCategories, (newCategories) => {
   }
 }, { immediate: true });
 
-const cartWithPromotions = computed(() => {
-  let processedCart = cart.value.map(item => ({
-    ...item,
-    discountedPrice: item.price
-  }));
+// 
+// --- 智慧計算引擎 v3.0 (包含 Bug 修復 和 提示功能) ---
+//
+const cartCalculation = computed(() => {
+  // 步驟 1: 計算原始小計 (這是判斷所有滿額活動的唯一標準)
+  const subtotal = cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  
+  const appliedDeals: string[] = [];
+  const gifts: string[] = [];
+  const promotionHints: string[] = []; // 新增: 優惠提示列表
+  const processedItems = JSON.parse(JSON.stringify(cart.value));
 
-  if (singleItemDeal.value && singleItemDeal.value.enabled && singleItemDeal.value.itemId) {
-    processedCart.forEach(item => {
-      if (item.id === singleItemDeal.value.itemId) {
-        item.discountedPrice = singleItemDeal.value.discountPrice;
+  // 步驟 2: 套用 "單品折扣"
+  const singleItemDeals = activePromotions.value.filter(p => p.type === 'SINGLE_ITEM_DEAL') as SingleItemDeal[];
+  if (singleItemDeals.length > 0) {
+    processedItems.forEach(item => {
+      const applicableDeal = singleItemDeals.find(deal => deal.itemId === item.id);
+      if (applicableDeal) {
+        item.discountedPrice = applicableDeal.discountPrice;
+        if (!appliedDeals.includes(applicableDeal.name)) {
+          appliedDeals.push(applicableDeal.name);
+        }
       }
     });
   }
+  
+  // 步驟 3: 計算經過 "單品折扣" 後的總計
+  let total = processedItems.reduce((sum, item) => sum + (item.discountedPrice || item.price) * item.quantity, 0);
 
-  return processedCart;
-});
+  // --- 邏輯修正開始 ---
+  // 所有 "滿額" 活動的門檻，都以 "原始小計 (subtotal)" 作為判斷標準
 
-const cartSubtotalAfterSingleItemDiscount = computed(() => {
-  return cartWithPromotions.value.reduce((sum, item) => sum + (item.discountedPrice * item.quantity), 0);
-});
-
-const isDiscountThresholdMet = computed(() => {
-  return spendAndDiscount.value.enabled && cartSubtotalAfterSingleItemDiscount.value >= spendAndDiscount.value.threshold;
-});
-
-const isGiftThresholdMet = computed(() => {
-  return spendAndGet.value.enabled && cartSubtotalAfterSingleItemDiscount.value >= spendAndGet.value.threshold;
-});
-
-const total = computed(() => {
-  let finalTotal = cartSubtotalAfterSingleItemDiscount.value;
-
-  if (isDiscountThresholdMet.value) {
-    const discountMultiplier = 1 - (spendAndDiscount.value.discount / 100);
-    finalTotal *= discountMultiplier;
+  // 步驟 4: 處理 "滿額折扣" (Spend and Discount)
+  const spendAndDiscountDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_DISCOUNT') as SpendAndDiscount[];
+  let appliedDiscount = false;
+  if (spendAndDiscountDeals.length > 0) {
+    const applicableDiscount = spendAndDiscountDeals
+      .filter(deal => subtotal >= deal.threshold) // <-- 修正: 使用 subtotal 判斷
+      .sort((a, b) => a.discount - b.discount)[0]; 
+    
+    if (applicableDiscount) {
+      total = Math.round(total * (applicableDiscount.discount / 100));
+      if (!appliedDeals.includes(applicableDiscount.name)) {
+          appliedDeals.push(applicableDiscount.name);
+      }
+      appliedDiscount = true;
+    }
   }
 
-  return Math.round(finalTotal);
+  // 步驟 5: 處理 "滿額贈品" (Spend and Get)
+  const spendAndGetDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_GET') as SpendAndGet[];
+  let appliedGift = false;
+  if (spendAndGetDeals.length > 0) {
+      const applicableGift = spendAndGetDeals
+        .filter(deal => subtotal >= deal.threshold) // <-- 修正: 使用 subtotal 判斷
+        .sort((a, b) => b.threshold - a.threshold)[0];
+
+      if(applicableGift) {
+          gifts.push(applicableGift.giftName);
+          if (!appliedDeals.includes(applicableGift.name)) {
+            appliedDeals.push(applicableGift.name);
+          }
+          appliedGift = true;
+      }
+  }
+  
+  // --- 新功能: 產生優惠提示 ---
+
+  // 提示 1: 顯示尚未達成的 "滿額折扣"
+  if (!appliedDiscount && spendAndDiscountDeals.length > 0) {
+      const nextDiscountDeal = spendAndDiscountDeals
+          .filter(deal => subtotal < deal.threshold) // 找出所有未達成的
+          .sort((a, b) => a.threshold - b.threshold)[0]; // 找出最接近的下一個門檻
+      if (nextDiscountDeal) {
+          const difference = nextDiscountDeal.threshold - subtotal;
+          promotionHints.push(`再消費 NT$${difference} 即可享有「${nextDiscountDeal.name}」！`);
+      }
+  }
+
+  // 提示 2: 顯示尚未達成的 "滿額贈品"
+  if (!appliedGift && spendAndGetDeals.length > 0) {
+      const nextGiftDeal = spendAndGetDeals
+          .filter(deal => subtotal < deal.threshold) // 找出所有未達成的
+          .sort((a, b) => a.threshold - b.threshold)[0]; // 找出最接近的下一個門檻
+      if (nextGiftDeal) {
+          const difference = nextGiftDeal.threshold - subtotal;
+          promotionHints.push(`再消費 NT$${difference} 即可獲得「${nextGiftDeal.giftName}」！`);
+      }
+  }
+
+  return {
+    items: processedItems,
+    subtotal: Math.round(subtotal),
+    total: total, 
+    appliedDeals,
+    gifts,
+    promotionHints // 新增: 回傳提示列表
+  };
 });
 
-const subtotal = computed(() => {
-  return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-});
+// (其餘 <script> 內容維持不變...)
 
 const addToCart = (item: any) => {
   if (item.isSetMeal) {
@@ -182,27 +252,29 @@ const handleTableSelected = (table: any) => {
 };
 
 const processOrder = (paymentMethod: 'cash' | 'linepay') => {
-  let finalCartItems = [...cartWithPromotions.value];
+  const { items, total, gifts } = cartCalculation.value;
 
-  if (isGiftThresholdMet.value) {
+  let finalCartItems = [...items];
+
+  gifts.forEach(giftName => {
     finalCartItems.push({ 
       id: `gift-${Date.now()}`,
-      name: spendAndGet.value.giftName, 
+      name: giftName, 
       price: 0, 
       quantity: 1,
       isGift: true 
     });
-  }
+  });
 
   const orderPayload = {
-    items: finalCartItems.map(item => ({ // 確保 items 符合 OrderItem[] 格式
+    items: finalCartItems.map(item => ({
       id: item.id,
       name: item.name,
       price: item.discountedPrice ?? item.price,
       quantity: item.quantity,
       isGift: item.isGift || false,
     })),
-    total: total.value,
+    total: total,
     paymentMethod: paymentMethod,
     tableNumber: selectedTable.value ? selectedTable.value.name : undefined
   };
@@ -218,6 +290,7 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
 </script>
 
 <style scoped>
+/* 樣式維持不變 */
 .pos-container {
   display: flex;
   flex-direction: column;
@@ -237,7 +310,6 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
   gap: 25px;
   padding: 25px;
   overflow: hidden;
-  /* This is necessary to contain the children */
 }
 
 .pos-main.single-column-layout {
@@ -254,8 +326,8 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
 
 .menu-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 25px;
   align-content: start;
 }
 

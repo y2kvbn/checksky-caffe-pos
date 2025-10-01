@@ -1,16 +1,15 @@
 <template>
   <div class="dashboard">
     <div class="background-image"></div>
-    <DashboardHeader @goToReservations="goToReservations" />
+    <DashboardHeader 
+      @goToReservations="goToReservations" 
+      @setView="handleSetView" 
+      @open-settlement="handleOpenSettlement" 
+    />
     <DashboardSidebar :activeView="activeView" @setView="activeView = $event" @logout="handleLogout" />
     <main class="main-content">
-      <!-- 
-        The setView event from DashboardHome is for navigating *outside* the dashboard (e.g., to the POS).
-        It needs to be emitted upwards to the parent component (App.vue), not handled here.
-        The sidebar handles internal view switching by setting activeView directly.
-      -->
       <div v-if="activeView === 'DashboardHome'">
-        <DashboardHome @setView="$emit('setView', $event)" />
+        <DashboardHome ref="dashboardHomeRef" @setView="handleSetView" />
       </div>
       <div v-if="activeView === 'MenuManagement'">
         <MenuManagement />
@@ -32,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import DashboardHeader from './DashboardHeader.vue';
 import DashboardSidebar from './DashboardSidebar.vue';
 import DashboardHome from './DashboardHome.vue';
@@ -45,15 +44,28 @@ import SystemSettings from './SystemSettings.vue';
 const emit = defineEmits(['setView', 'logout']);
 
 const activeView = ref('DashboardHome');
+const dashboardHomeRef = ref<InstanceType<typeof DashboardHome> | null>(null);
 
 const handleLogout = () => {
   emit('logout');
 };
 
+const handleSetView = (view: string, options?: any) => {
+  emit('setView', view, options);
+};
+
 const goToReservations = () => {
-  // This emits to App.vue to switch to the POS view, with a specific sub-view
   emit('setView', 'pos', { view: 'reservations' });
 };
+
+const handleOpenSettlement = async () => {
+  if (activeView.value !== 'DashboardHome') {
+    activeView.value = 'DashboardHome';
+    await nextTick(); // Wait for the component to be rendered
+  }
+  dashboardHomeRef.value?.openSettlementModal();
+};
+
 </script>
 
 <style scoped>

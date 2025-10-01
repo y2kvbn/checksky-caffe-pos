@@ -27,18 +27,28 @@ const svgRef = ref<SVGElement | null>(null);
 
 const chartDataPoints = computed(() => {
   const data = props.chartData;
-  if (!data) return [];
+  if (!data || data.length === 0) return [];
 
   const width = 380;
   const height = 180;
+  
   const maxVal = Math.max(...data);
   const minVal = Math.min(...data);
-  const yPadding = 20;
+  const yPadding = 20; // Added padding
+
+  // Adjust height based on maxVal to create a buffer
+  const effectiveHeight = height - yPadding;
 
   return data.map((value, index) => {
     const x = 20 + (index / (data.length - 1)) * width;
-    const y = yPadding + height - ((value - minVal) / (maxVal - minVal)) * height;
-    return { x, y: y - yPadding, value };
+    
+    let yRatio = 0;
+    if (maxVal > minVal) {
+      yRatio = (value - minVal) / (maxVal - minVal);
+    }
+
+    const y = yPadding + effectiveHeight - (yRatio * effectiveHeight);
+    return { x, y: y, value };
   });
 });
 
@@ -55,17 +65,14 @@ const handleMouseMove = (evt: MouseEvent) => {
   const svg = svgRef.value;
   if (!svg || !chartDataPoints.value.length) return;
 
-  const rect = svg.getBoundingClientRect();
-  const svgWidth = (svg as any).viewBox.baseVal.width;
-  const clientWidth = rect.width;
-
-  const mouseX = (evt.clientX - rect.left) * (svgWidth / clientWidth);
+  const pt = new DOMPoint(evt.clientX, evt.clientY);
+  const svgPt = pt.matrixTransform(svg.getScreenCTM()?.inverse());
 
   let closestIndex = 0;
   let minDistance = Infinity;
 
   chartDataPoints.value.forEach((point, index) => {
-    const distance = Math.abs(point.x - mouseX);
+    const distance = Math.abs(point.x - svgPt.x);
     if (distance < minDistance) {
       minDistance = distance;
       closestIndex = index;
@@ -78,6 +85,7 @@ const handleMouseMove = (evt: MouseEvent) => {
 const handleMouseLeave = () => {
   activePointIndex.value = null;
 };
+
 </script>
 
 <style scoped>
@@ -91,7 +99,7 @@ const handleMouseLeave = () => {
 
 .chart-placeholder {
   width: 100%;
-  height: 70%;
+  height: 100%; /* Changed from 70% */
   display: flex;
   align-items: center;
   justify-content: center;
