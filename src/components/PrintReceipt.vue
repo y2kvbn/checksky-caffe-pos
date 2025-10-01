@@ -12,7 +12,7 @@
         </div>
       </header>
 
-      <!-- 商品列表 -->
+      <!-- [REFACTORED] Items list with hierarchy -->
       <section class="items-section">
         <div class="items-grid header">
           <span class="item-name">商品</span>
@@ -20,12 +20,26 @@
           <span>單價</span>
           <span>金額</span>
         </div>
-        <div v-for="item in order.items" :key="item.id" class="items-grid-row">
-          <span class="item-name">{{ item.name }}</span>
-          <span>{{ item.quantity }}</span>
-          <span>{{ item.price }}</span>
-          <span>{{ item.price * item.quantity }}</span>
-        </div>
+        <template v-for="item in order.items" :key="item.id">
+          <!-- Main Item -->
+          <div class="items-grid-row main-item-row">
+            <span class="item-name">{{ item.name }}</span>
+            <span>{{ item.quantity }}</span>
+            <span>{{ item.price }}</span>
+            <span>{{ item.price * item.quantity }}</span>
+          </div>
+          <!-- Sub Items -->
+          <div v-if="item.subItems && item.subItems.length > 0" class="sub-items-container">
+            <div v-for="(subItem, index) in item.subItems" :key="index" class="items-grid-row sub-item-row">
+              <span class="item-name sub-item-name"> └ {{ subItem.name }}</span>
+              <span>{{ subItem.quantity }}</span>
+              <span v-if="subItem.price > 0">{{ subItem.price }}</span>
+              <span v-else></span>
+              <span v-if="subItem.price > 0">{{ subItem.price * subItem.quantity }}</span>
+               <span v-else></span>
+            </div>
+          </div>
+        </template>
       </section>
 
       <!-- 金額總計 -->
@@ -139,6 +153,20 @@ const formatDateTime = (date: Date): string => {
   gap: 10px;
   font-size: 14px;
   padding: 4px 0;
+}
+
+/* [NEW] Specific styling for main and sub-items */
+.main-item-row .item-name {
+  font-weight: bold;
+}
+
+.sub-item-row .sub-item-name {
+  padding-left: 15px; /* Indent sub-items */
+}
+
+.sub-item-row {
+    color: #333; /* Slightly lighter color for sub-items */
+    font-size: 13px;
 }
 
 .items-grid span:not(.item-name), 

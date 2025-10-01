@@ -7,13 +7,7 @@
     <h1 class="logo">向天泓咖啡廳</h1>
     
     <div class="header-actions">
-      <div class="table-selection-wrapper">
-        <div v-if="selectedTable" class="table-display">
-          <span>桌號: <strong>{{ selectedTable.name }}</strong></span>
-          <button @click="$emit('openTableModal')">更換</button>
-        </div>
-        <button v-else class="btn btn-secondary" @click="$emit('openTableModal')">&#128442; 選擇桌號</button>
-      </div>
+      <!-- REMOVED table-selection-wrapper -->
       
       <button class="btn btn-outline" @click="$emit('setPosView', 'reservations')" :class="{ active: posView === 'reservations' }"><span>&#128197;</span> 訂位總覽</button>
       

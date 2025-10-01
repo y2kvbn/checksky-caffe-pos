@@ -149,28 +149,47 @@ function confirm() {
       return;
   }
 
-  const mealPackage = [];
-  mealPackage.push({ ...props.setMeal });
-  mealPackage.push({ id: 'rice01', name: '白飯 (附贈)', category: '加點', price: 0 });
+  const subItems = [];
+  let setMealPrice = props.setMeal.price;
 
+  // 1. 新增附贈的白飯
+  subItems.push({ id: 'rice01', name: '白飯 (附贈)', price: 0, quantity: 1, isGift: true });
+
+  // 2. 處理飲料
   if (drinkChoiceMode.value === 'upgrade') {
-    mealPackage.push({ 
+    const upgradedDrink = { 
         ...selectedDrinkObject, 
-        price: selectedDrinkObject.price - 60,
-        name: `${selectedDrinkObject.name} (更換折抵)`
-    });
+        price: selectedDrinkObject.price, // 使用原始價格
+        name: `${selectedDrinkObject.name} (更換)`,
+        quantity: 1
+    };
+    subItems.push(upgradedDrink);
+    // 飲料更換折抵 NT$60，從主餐價格中扣除
+    setMealPrice -= 60;
   } else {
-     mealPackage.push({ ...selectedDrinkObject, price: 0, name: `${selectedDrinkObject.name} (附贈)` });
+     const standardDrink = { ...selectedDrinkObject, price: 0, name: `${selectedDrinkObject.name} (附贈)`, quantity: 1, isGift: true };
+     subItems.push(standardDrink);
   }
 
+  // 3. 處理加點的白飯
   if (extraRiceCount.value > 0 && extraRiceItem.value) {
-     const riceToAdd = { ...extraRiceItem.value };
-     // We push multiple items to represent multiple bowls of rice
-     for (let i = 0; i < extraRiceCount.value; i++) {
-        mealPackage.push(riceToAdd);
-     }
+     const extraRice = { 
+         ...extraRiceItem.value, 
+         quantity: extraRiceCount.value 
+     };
+     subItems.push(extraRice);
+     // 將加點白飯的費用加到主餐價格上
+     setMealPrice += extraRice.price * extraRice.quantity;
   }
   
+  // 建立一個結構完整的套餐物件
+  const mealPackage = {
+      ...props.setMeal,
+      price: setMealPrice, // 更新後的套餐總價
+      subItems: subItems,  // 附餐陣列
+      quantity: 1
+  };
+
   emit('confirm', mealPackage);
   cancel();
 }

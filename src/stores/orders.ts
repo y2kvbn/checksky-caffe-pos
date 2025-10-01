@@ -8,16 +8,17 @@ export interface OrderItem {
   price: number;
   quantity: number;
   isGift?: boolean; 
+  subItems?: OrderItem[]; // <--- [ADD] 支援巢狀的附餐項目
 }
 
 // 擴充後的 Order 介面
 export interface Order {
   id: string;
-  items: OrderItem[];
-  subtotal: number; // 小計 (折扣前)
-  discount: number; // 折扣金額
-  total: number; // 最終總計
-  appliedPromotions: { name: string; amount: number }[]; // 套用的折扣
+  items: OrderItem[]; // 現在這個陣列將包含具有層級關係的項目
+  subtotal: number; 
+  discount: number; 
+  total: number; 
+  appliedPromotions: { name: string; amount: number }[]; 
   timestamp: Date;
   status: '處理中' | '已完成' | '已取消';
   tableNumber?: string;
@@ -43,6 +44,11 @@ export const useOrdersStore = defineStore('orders', () => {
         subtotal: order.subtotal || order.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
         discount: order.discount || 0,
         appliedPromotions: order.appliedPromotions || [],
+        // 確保 items 結構的完整性 (對於從舊版本升級的用戶)
+        items: order.items.map(item => ({
+            ...item,
+            subItems: item.subItems || []
+        }))
       }));
     } catch (e) {
       console.error("無法從 localStorage 解析訂單:", e);
@@ -64,25 +70,21 @@ export const useOrdersStore = defineStore('orders', () => {
 
   const totalOrdersCount = computed(() => orders.value.length);
 
-  // 升級 addOrder 函式以處理折扣
+  // addOrder 函式現在能處理包含 subItems 的訂單結構
   function addOrder(newOrder: { 
     items: OrderItem[]; 
     tableNumber?: string; 
     paymentMethod: 'cash' | 'linepay';
     appliedPromotions: { name: string; amount: number }[];
+    subtotal: number;
+    discount: number;
+    total: number;
   }) {
-    const subtotal = newOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const discount = newOrder.appliedPromotions.reduce((sum, promo) => sum + promo.amount, 0);
-    const total = subtotal - discount;
-
     const orderWithId: Order = {
       ...newOrder,
       id: `order-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       timestamp: new Date(),
       status: '處理中',
-      subtotal,
-      discount,
-      total,
     };
     orders.value.unshift(orderWithId);
   }

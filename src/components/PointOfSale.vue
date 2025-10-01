@@ -30,6 +30,7 @@
         @decreaseQuantity="decreaseQuantity" 
         @increaseQuantity="increaseQuantity" 
         @checkout="checkout" 
+        @openTableModal="isTableModalVisible = true"
       />
     </div>
 
@@ -63,7 +64,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useOrdersStore } from '../stores/orders';
+import { useOrdersStore, type OrderItem } from '../stores/orders';
 import { useMenuStore, type MenuItem } from '../stores/menu';
 import { usePromotionsStore, type SingleItemDeal, type SpendAndDiscount, type SpendAndGet } from '../stores/promotions';
 import SetMealModal from './SetMealModal.vue';
@@ -74,9 +75,11 @@ import CategorySidebar from './CategorySidebar.vue';
 import MenuItemCard from './MenuItemCard.vue';
 import CartSidebar from './CartSidebar.vue';
 
+// 購物車項目的型別，現在也包含 subItems
 interface CartItem extends MenuItem {
   quantity: number;
-  cartItemId: string;
+  cartItemId: string; 
+  subItems?: OrderItem[];
 }
 
 const props = defineProps<{ view: string }>();
@@ -112,6 +115,7 @@ watch(allCategories, (newCategories) => {
   }
 }, { immediate: true });
 
+// 購物車計算邏輯現在也考慮到了層級結構
 const cartCalculation = computed(() => {
   const subtotal = cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0);
   let totalDiscount = 0;
@@ -125,6 +129,9 @@ const cartCalculation = computed(() => {
 
   const itemsWithSingleItemDiscount = new Set<string>();
   cart.value.forEach(item => {
+    // 套餐的主餐不應該單獨享受折扣
+    if (item.subItems && item.subItems.length > 0) return;
+
     const applicableDeal = singleItemDeals.find(deal => deal.itemId === item.id);
     if (applicableDeal) {
       const discountAmount = (item.price - applicableDeal.discountPrice) * item.quantity;
@@ -140,14 +147,14 @@ const cartCalculation = computed(() => {
 
   let spendDiscountApplied = false;
   if (spendAndDiscountDeals.length > 0) {
-    const applicableDiscount = spendAndDiscountDeals
+    const bestDeal = spendAndDiscountDeals
       .filter(deal => subtotal >= deal.threshold)
-      .sort((a, b) => b.discount - a.discount)[0];
+      .sort((a, b) => a.discount - b.discount)[0];
 
-    if (applicableDiscount) {
-      const discountAmount = Math.round(remainingItemsTotal * (1 - applicableDiscount.discount / 100));
-      totalDiscount += remainingItemsTotal - discountAmount;
-      appliedPromotions.push({ name: applicableDiscount.name, amount: remainingItemsTotal - discountAmount });
+    if (bestDeal) {
+      const discountValue = remainingItemsTotal * (1 - bestDeal.discount / 100);
+      totalDiscount += discountValue;
+      appliedPromotions.push({ name: bestDeal.name, amount: discountValue });
       spendDiscountApplied = true;
     }
   }
@@ -205,7 +212,7 @@ const addToCart = (item: MenuItem) => {
     selectedSetMeal.value = item;
     isSetMealModalVisible.value = true;
   } else {
-    const existingItem = cart.value.find(cartItem => cartItem.id === item.id);
+    const existingItem = cart.value.find(cartItem => cartItem.id === item.id && !cartItem.subItems);
     if (existingItem) {
       existingItem.quantity++;
     } else {
@@ -214,14 +221,11 @@ const addToCart = (item: MenuItem) => {
   }
 };
 
-const handleSetMealConfirm = (mealPackage: MenuItem[]) => {
-  mealPackage.forEach(item => {
-    const existingItem = cart.value.find(cartItem => cartItem.id === item.id);
-    if (existingItem) {
-      existingItem.quantity++;
-    } else {
-      cart.value.push({ ...item, quantity: 1, cartItemId: `cart-item-${cartIdCounter++}` });
-    }
+// [REFACTORED] - 處理來自 SetMealModal 的完整套餐物件
+const handleSetMealConfirm = (mealPackage: CartItem) => {
+  cart.value.push({ 
+      ...mealPackage, 
+      cartItemId: `cart-item-${cartIdCounter++}` // 賦予一個唯一的購物車 ID
   });
   isSetMealModalVisible.value = false;
 };
@@ -258,10 +262,14 @@ const handleTableSelected = (table: any) => {
   isTableModalVisible.value = false;
 };
 
+// [REFACTORED] - 結帳時傳遞完整的層級結構
 const processOrder = (paymentMethod: 'cash' | 'linepay') => {
   const { items, subtotal, total, discount, appliedPromotions, gifts } = cartCalculation.value;
 
-  let finalCartItems = [...items];
+  // 複製一份購物車項目以處理贈品
+  let finalCartItems: OrderItem[] = JSON.parse(JSON.stringify(items));
+
+  // 將贈品作為獨立項目加入
   gifts.forEach(giftName => {
     const giftItem = menuItems.value.find(item => item.name === giftName);
     finalCartItems.push({ 
@@ -269,22 +277,12 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
       name: giftName, 
       price: 0, 
       quantity: 1,
-      cartItemId: `cart-item-${cartIdCounter++}`,
-      category: '贈品',
-      inStock: true,
-      isSetMeal: false,
       isGift: true,
     });
   });
 
   const orderPayload = {
-    items: finalCartItems.map(item => ({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      isGift: item.isGift || false,
-    })),
+    items: finalCartItems,
     subtotal,
     discount,
     total,

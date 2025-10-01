@@ -18,18 +18,17 @@
 
           <!-- Dynamic Form Component -->
           <component 
+            v-if="currentView.component"
             :is="currentView.component"
             @login-success="handleLoginSuccess"
-            @showForgotPassword="viewState = 'forgotPassword'"
-            @showEnterCode="viewState = 'enterCode'"
-            @showResetPassword="viewState = 'resetPassword'"
-            @showSuccess="viewState = 'success'"
+            @showForgotPassword="switchToForgotPassword" 
+            @reset-email-sent="viewState = 'success'"
             @backToLogin="viewState = 'login'"
           />
 
-           <!-- Success Message -->
+          <!-- Success Message -->
           <div v-if="viewState === 'success'">
-            <p class="success-message"><i class="fas fa-check-circle"></i> 密碼已成功更新！</p>
+            <p class="success-message"><i class="fas fa-check-circle"></i> 密碼重設說明已寄出，請至您的信箱查看。</p>
             <button @click="viewState = 'login'" class="btn-login">返回登入</button>
           </div>
 
@@ -47,22 +46,18 @@
 import { ref, computed } from 'vue';
 import LoginForm from './LoginForm.vue';
 import ForgotPasswordForm from './ForgotPasswordForm.vue';
-import VerifyCodeForm from './VerifyCodeForm.vue';
-import ResetPasswordForm from './ResetPasswordForm.vue';
 
 // Emits
 const emit = defineEmits(['login-success']);
 
-type ViewState = 'login' | 'forgotPassword' | 'enterCode' | 'resetPassword' | 'success';
+type ViewState = 'login' | 'forgotPassword' | 'success';
 
 const viewState = ref<ViewState>('login');
 
 const viewComponents = {
   login: { component: LoginForm, title: '點餐系統登入' },
   forgotPassword: { component: ForgotPasswordForm, title: '忘記密碼' },
-  enterCode: { component: VerifyCodeForm, title: '輸入驗證碼' },
-  resetPassword: { component: ResetPasswordForm, title: '設定新密碼' },
-  success: { component: null, title: '重設成功' }
+  success: { component: null, title: '重設郵件已寄出' }
 };
 
 const currentView = computed(() => viewComponents[viewState.value]);
@@ -70,6 +65,11 @@ const formTitle = computed(() => currentView.value.title);
 
 const handleLoginSuccess = () => {
   emit('login-success');
+};
+
+// Function to switch to the forgot password view
+const switchToForgotPassword = () => {
+  viewState.value = 'forgotPassword';
 };
 </script>
 
@@ -159,7 +159,7 @@ const handleLoginSuccess = () => {
 /* Text & Links */
 .device-recommendation { font-size: 12px; color: #888; margin-top: 15px; text-align: center; }
 .error-message { color: #e74c3c; margin-bottom: 15px; font-weight: 500; font-size: 14px; }
-.success-message { color: #28a745; font-size: 18px; font-weight: bold; text-align: center; margin-bottom: 20px;}
+.success-message { color: #28a745; font-size: 16px; line-height: 1.6; font-weight: 500; text-align: center; margin-bottom: 20px;}
 .success-message i { margin-right: 8px; }
 
 .form-footer {
