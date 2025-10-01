@@ -23,11 +23,6 @@
       </div>
       <div class="cart-summary">
         
-        <!-- 
-          核心改動 1: 新增 "優惠提示" 區塊
-          - 使用 v-if 判斷是否有提示
-          - 遍歷 promotionHints 陣列來顯示所有提示訊息
-        -->
         <div v-if="promotionHints.length > 0" class="promo-hints-container">
             <div v-for="hint in promotionHints" :key="hint" class="promo-message hint">
                 <p>💡 {{ hint }}</p>
@@ -55,21 +50,20 @@
           <span>總計:</span>
           <span>NT${{ total }}</span>
         </div>
-        <button class="btn btn-confirm" @click="$emit('checkout')" :disabled="!selectedTable">前往結帳</button>
+        <button class="btn btn-confirm" @click="$emit('checkout')" :disabled="!selectedTable || cartItems.length === 0">前往結帳</button>
       </div>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-// 核心改動 2: 新增 `promotionHints` prop
 defineProps<{
   cartItems: any[],
   subtotal: number,
   total: number,
   appliedDeals: string[],
   gifts: string[],
-  promotionHints: string[], // <-- 新增的 prop
+  promotionHints: string[],
   selectedTable: any,
 }>();
 
@@ -81,7 +75,7 @@ defineEmits(['decreaseQuantity', 'increaseQuantity', 'checkout']);
 /* ... (其餘樣式不變) ... */
 
 .cart-sidebar {
-  width: 350px; /* 稍微加寬以容納更多資訊 */
+  width: 350px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -210,7 +204,6 @@ defineEmits(['decreaseQuantity', 'increaseQuantity', 'checkout']);
   font-weight: 500;
 }
 
-/* 核心改動 3: 為 "優惠提示" 設計專屬樣式 */
 .promo-message.hint {
   background-color: #e6f7ff;
   border-left: 4px solid #1890ff;
@@ -233,21 +226,38 @@ defineEmits(['decreaseQuantity', 'increaseQuantity', 'checkout']);
   color: #9c4221;
 }
 
+/* --- Checkout Button Redesign --- */
 .btn-confirm {
   width: 100%;
   padding: 16px;
   font-size: 18px;
+  font-weight: bold;
   justify-content: center;
-  background-color: var(--secondary-color);
-  color: var(--text-dark);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  /* Main Action Color */
+  background-color: #FF6A3D;
+  color: #FFFFFF;
+  box-shadow: 0 4px 15px rgba(255, 106, 61, 0.4);
 }
 
-.btn-confirm:hover {
-  opacity: 0.9;
+.btn-confirm:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(255, 106, 61, 0.6);
+}
+
+.btn-confirm:active:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(255, 106, 61, 0.4);
 }
 
 .btn-confirm:disabled {
-  background-color: #ccc;
+  background-color: #E5E7EB; /* Softer gray for disabled state */
+  color: #9CA3AF;
+  box-shadow: none;
   cursor: not-allowed;
 }
 </style>
