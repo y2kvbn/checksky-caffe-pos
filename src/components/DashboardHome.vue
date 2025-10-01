@@ -21,7 +21,7 @@
 
     <!-- Print Modal -->
     <Teleport to="body">
-      <div v-if="showPrintModal" class="print-modal-overlay" @click.self="closePrintPreview">
+      <div v-if="showPrintModal" class="print-modal-overlay">
         <div class="print-modal-content">
           <div class="print-modal-header">
             <h3>訂單收據預覽</h3>
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineExpose } from 'vue'; // <-- Import defineExpose
+import { ref, defineExpose } from 'vue';
 import { useOrdersStore, type Order } from '../stores/orders';
 import { useRevenueStore } from '../stores/revenue';
 import { storeToRefs } from 'pinia';
@@ -208,6 +208,7 @@ const handleArchiveAndClear = () => {
 /* --- Buttons --- */
 .btn {
   display: flex;
+  justify-content: center; /* Center content horizontally */
   align-items: center;
   gap: 8px;
   font-weight: bold;
@@ -246,7 +247,7 @@ const handleArchiveAndClear = () => {
   background: #fff;
   border-radius: 15px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  width: 340px;
+  width: 440px;
   overflow: hidden;
   animation: fadeIn 0.3s ease-out;
 }
@@ -288,6 +289,11 @@ const handleArchiveAndClear = () => {
   justify-content: flex-end;
   gap: 10px;
 }
+
+.print-modal-footer .btn {
+    flex: 1; /* <-- 核心改動: 讓按鈕等寬 */
+}
+
 
 @keyframes fadeIn {
   from {

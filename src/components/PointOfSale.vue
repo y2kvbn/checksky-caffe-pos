@@ -18,9 +18,6 @@
         <ReservationManagement v-else />
       </main>
 
-      <!-- 
-        核心改動 1: 傳遞新的 prop `promotionHints` 給 CartSidebar 
-      -->
       <CartSidebar 
         v-if="posView === 'menu'" 
         :cartItems="cartCalculation.items"
@@ -37,12 +34,29 @@
     </div>
 
     <!-- Modals -->
+    <!-- 
+      核心改動: 優化結帳彈窗 (Optimized Checkout Modal)
+      - 放大彈窗尺寸 (Enlarged modal size)
+      - 將按鈕改為大型塊狀點擊區 (Button to large block tappable area)
+      - 嵌入 SVG 圖示 (Embedded SVG icons)
+    -->
     <div v-if="showCheckoutModal" class="checkout-modal">
         <div class="modal-content">
             <h3>選擇付款方式</h3>
             <div class="payment-options">
-                <button class="btn btn-success" @click="processOrder('cash')">現金結帳</button>
-                <button class="btn btn-linepay" @click="processOrder('linepay')">LinePay</button>
+                <!-- Cash Option -->
+                <button class="payment-option btn-cash" @click="processOrder('cash')">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><circle cx="12" cy="12" r="4"></circle></svg>
+                    <span>現金結帳</span>
+                </button>
+                <!-- LinePay Option -->
+                <button class="payment-option btn-linepay" @click="processOrder('linepay')">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 2H7C5.89543 2 5 2.89543 5 4V20C5 21.1046 5.89543 22 7 22H17C18.1046 22 19 21.1046 19 20V4C19 2.89543 18.1046 2 17 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 7H10V8H9V7Z" fill="currentColor"/><path d="M11 7H12V8H11V7Z" fill="currentColor"/><path d="M13 7H15V8H13V7Z" fill="currentColor"/><path d="M9 9H10V11H9V9Z" fill="currentColor"/><path d="M11 9H12V10H11V9Z" fill="currentColor"/><path d="M13 9H14V10H13V9Z" fill="currentColor"/><path d="M14 10H15V11H14V10Z" fill="currentColor"/><path d="M9 12H11V13H9V12Z" fill="currentColor"/><path d="M12 12H13V14H12V12Z" fill="currentColor"/><path d="M14 12H15V13H14V12Z" fill="currentColor"/><path d="M10 14H11V15H10V14Z" fill="currentColor"/><path d="M13 14H14V15H13V14Z" fill="currentColor"/><path d="M9 16H10V17H9V16Z" fill="currentColor"/><path d="M11 16H13V17H11V16Z" fill="currentColor"/><path d="M14 16H15V17H14V16Z" fill="currentColor"/>
+                    </svg>
+                    <span>LinePay</span>
+                </button>
             </div>
             <button class="btn btn-secondary" @click="showCheckoutModal = false">取消</button>
         </div>
@@ -99,19 +113,14 @@ watch(allCategories, (newCategories) => {
   }
 }, { immediate: true });
 
-// 
-// --- 智慧計算引擎 v3.0 (包含 Bug 修復 和 提示功能) ---
-//
 const cartCalculation = computed(() => {
-  // 步驟 1: 計算原始小計 (這是判斷所有滿額活動的唯一標準)
   const subtotal = cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0);
   
   const appliedDeals: string[] = [];
   const gifts: string[] = [];
-  const promotionHints: string[] = []; // 新增: 優惠提示列表
+  const promotionHints: string[] = [];
   const processedItems = JSON.parse(JSON.stringify(cart.value));
 
-  // 步驟 2: 套用 "單品折扣"
   const singleItemDeals = activePromotions.value.filter(p => p.type === 'SINGLE_ITEM_DEAL') as SingleItemDeal[];
   if (singleItemDeals.length > 0) {
     processedItems.forEach(item => {
@@ -125,18 +134,13 @@ const cartCalculation = computed(() => {
     });
   }
   
-  // 步驟 3: 計算經過 "單品折扣" 後的總計
   let total = processedItems.reduce((sum, item) => sum + (item.discountedPrice || item.price) * item.quantity, 0);
 
-  // --- 邏輯修正開始 ---
-  // 所有 "滿額" 活動的門檻，都以 "原始小計 (subtotal)" 作為判斷標準
-
-  // 步驟 4: 處理 "滿額折扣" (Spend and Discount)
   const spendAndDiscountDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_DISCOUNT') as SpendAndDiscount[];
   let appliedDiscount = false;
   if (spendAndDiscountDeals.length > 0) {
     const applicableDiscount = spendAndDiscountDeals
-      .filter(deal => subtotal >= deal.threshold) // <-- 修正: 使用 subtotal 判斷
+      .filter(deal => subtotal >= deal.threshold)
       .sort((a, b) => a.discount - b.discount)[0]; 
     
     if (applicableDiscount) {
@@ -148,12 +152,11 @@ const cartCalculation = computed(() => {
     }
   }
 
-  // 步驟 5: 處理 "滿額贈品" (Spend and Get)
   const spendAndGetDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_GET') as SpendAndGet[];
   let appliedGift = false;
   if (spendAndGetDeals.length > 0) {
       const applicableGift = spendAndGetDeals
-        .filter(deal => subtotal >= deal.threshold) // <-- 修正: 使用 subtotal 判斷
+        .filter(deal => subtotal >= deal.threshold)
         .sort((a, b) => b.threshold - a.threshold)[0];
 
       if(applicableGift) {
@@ -165,24 +168,20 @@ const cartCalculation = computed(() => {
       }
   }
   
-  // --- 新功能: 產生優惠提示 ---
-
-  // 提示 1: 顯示尚未達成的 "滿額折扣"
   if (!appliedDiscount && spendAndDiscountDeals.length > 0) {
       const nextDiscountDeal = spendAndDiscountDeals
-          .filter(deal => subtotal < deal.threshold) // 找出所有未達成的
-          .sort((a, b) => a.threshold - b.threshold)[0]; // 找出最接近的下一個門檻
+          .filter(deal => subtotal < deal.threshold)
+          .sort((a, b) => a.threshold - b.threshold)[0];
       if (nextDiscountDeal) {
           const difference = nextDiscountDeal.threshold - subtotal;
           promotionHints.push(`再消費 NT$${difference} 即可享有「${nextDiscountDeal.name}」！`);
       }
   }
 
-  // 提示 2: 顯示尚未達成的 "滿額贈品"
   if (!appliedGift && spendAndGetDeals.length > 0) {
       const nextGiftDeal = spendAndGetDeals
-          .filter(deal => subtotal < deal.threshold) // 找出所有未達成的
-          .sort((a, b) => a.threshold - b.threshold)[0]; // 找出最接近的下一個門檻
+          .filter(deal => subtotal < deal.threshold)
+          .sort((a, b) => a.threshold - b.threshold)[0];
       if (nextGiftDeal) {
           const difference = nextGiftDeal.threshold - subtotal;
           promotionHints.push(`再消費 NT$${difference} 即可獲得「${nextGiftDeal.giftName}」！`);
@@ -195,11 +194,9 @@ const cartCalculation = computed(() => {
     total: total, 
     appliedDeals,
     gifts,
-    promotionHints // 新增: 回傳提示列表
+    promotionHints
   };
 });
-
-// (其餘 <script> 內容維持不變...)
 
 const addToCart = (item: any) => {
   if (item.isSetMeal) {
@@ -290,7 +287,6 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
 </script>
 
 <style scoped>
-/* 樣式維持不變 */
 .pos-container {
   display: flex;
   flex-direction: column;
@@ -331,13 +327,15 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
   align-content: start;
 }
 
+/* --- Checkout Modal Styles --- */
+
 .checkout-modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -347,35 +345,77 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
 .modal-content {
   background-color: #fff;
   padding: 40px;
-  border-radius: 15px;
-  box-shadow: var(--shadow);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   text-align: center;
+  width: 90%;
+  max-width: 600px;
+  transform: scale(1.05);
 }
 
 .modal-content h3 {
   margin-top: 0;
-  font-size: 24px;
+  margin-bottom: 30px;
+  font-size: 28px;
+  color: var(--text-dark);
 }
 
 .payment-options {
-  display: flex;
-  gap: 20px;
-  margin: 25px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin: 30px 0;
 }
 
-.btn-success {
-  background-color: #48bb78;
+.payment-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  border-radius: 15px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
   color: white;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.payment-option svg {
+  margin-bottom: 15px;
+  width: 60px;
+  height: 60px;
+}
+
+.payment-option:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.btn-cash {
+  background-color: #48bb78;
+}
+
+.btn-cash:hover {
+    background-color: #3f9e68;
 }
 
 .btn-linepay {
   background-color: #00B900;
-  color: white;
 }
+
+.btn-linepay:hover {
+    background-color: #00a300;
+}
+
 
 .btn-secondary {
   background-color: #a0aec0;
   color: white;
   width: 100%;
+  padding: 15px;
+  font-size: 18px;
+  margin-top: 20px;
 }
 </style>

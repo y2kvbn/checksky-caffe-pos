@@ -1,0 +1,10 @@
+[
+  { "id": "table-a1", "name": "A1", "status": "available" },
+  { "id": "table-a2", "name": "A2", "status": "available" },
+  { "id": "table-a3", "name": "A3", "status": "available" },
+  { "id": "table-a4", "name": "A4", "status": "available" },
+  { "id": "table-a5", "name": "A5", "status": "available" },
+  { "id": "table-b1", "name": "B1", "status": "available" },
+  { "id": "table-b2", "name": "B2", "status": "available" },
+  { "id": "table-b3", "name": "B3", "status": "available" }
+]
