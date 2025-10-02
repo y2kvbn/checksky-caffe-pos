@@ -194,14 +194,16 @@ const handleArchiveAndClear = () => {
 </style>
 
 <style scoped>
-/* --- Layout --- */
+/* [FIX-7] 縮減頂部間距 */
 .orders-container {
-  margin-top: 30px;
+  margin-top: 20px;
 }
 
+/* [FIX-8] 縮減訂單卡片寬度 */
 .orders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* 將最小寬度從 300px 縮減至 255px */
+  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
   gap: 20px;
 }
 
@@ -291,7 +293,7 @@ const handleArchiveAndClear = () => {
 }
 
 .print-modal-footer .btn {
-    flex: 1; /* <-- 核心改動: 讓按鈕等寬 */
+    flex: 1;
 }
 
 

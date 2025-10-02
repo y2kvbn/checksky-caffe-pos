@@ -9,11 +9,12 @@
 </script>
 
 <style scoped>
+/* [FIX-7] 縮減底部間距 */
 .main-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin-bottom: 20px; /* 縮減間距 */
 }
 
 .main-header h2 {

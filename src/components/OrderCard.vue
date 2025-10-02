@@ -2,7 +2,8 @@
   <div class="order-card" :class="`status-${order.status.toLowerCase()}`">
     <div class="order-card-header">
       <div class="order-title-group">
-        <span class="order-id">訂單 #{{ formattedOrderIndex }}</span>
+        <!-- [FIX-10] 顯示 order.orderNumber 而不是 orderIndex -->
+        <span class="order-id">訂單 #{{ formattedOrderNumber }}</span>
         <span class="order-status">{{ order.status }}</span>
       </div>
       <button class="btn-delete" @click.stop="$emit('delete-order', order.id)">
@@ -10,15 +11,12 @@
       </button>
     </div>
     <div class="order-card-body">
-      <!-- [REFACTORED] Order items rendering with hierarchy -->
       <div class="order-items">
         <div v-for="item in order.items" :key="item.id" class="order-item-wrapper">
-          <!-- Main Item -->
           <div class="order-item main-item">
             <span>{{ item.name }}</span>
             <span>x {{ item.quantity }}</span>
           </div>
-          <!-- Sub Items (for set meals) -->
           <div v-if="item.subItems && item.subItems.length > 0" class="sub-items-list">
             <div v-for="(subItem, index) in item.subItems" :key="index" class="order-item sub-item">
               <span>└ {{ subItem.name }}</span>
@@ -49,20 +47,23 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+// [FIX-10] 引入新的 Order 型別定義
 import type { Order } from '../stores/orders';
 import { useOrdersStore } from '../stores/orders';
 
 const props = defineProps<{ 
   order: Order,
-  orderIndex: number
+  // [FIX-10] orderIndex 現在不再是必要 props
+  orderIndex: number 
 }>();
 
 const emit = defineEmits(['openPrintPreview', 'delete-order']);
 
 const ordersStore = useOrdersStore();
 
-const formattedOrderIndex = computed(() => {
-  return (props.orderIndex + 1).toString().padStart(3, '0');
+// [FIX-10] 建立一個 computed property 來格式化 order.orderNumber
+const formattedOrderNumber = computed(() => {
+  return (props.order.orderNumber).toString().padStart(3, '0');
 });
 
 const formatTime = (date: Date) => {
@@ -97,7 +98,7 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 18px; /* Slightly increased padding */
+  padding: 12px 18px;
   background-color: #f9fafb;
   border-bottom: 1px solid #f0f0f0;
 }
@@ -110,7 +111,7 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
 
 .order-id {
   font-weight: bold;
-  font-size: 18px; /* Increased font size */
+  font-size: 18px;
   color: #555;
 }
 
@@ -119,10 +120,10 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
   border: none;
   color: #e57373;
   cursor: pointer;
-  padding: 8px; /* Increased padding */
+  padding: 8px;
   border-radius: 50%;
   transition: background-color 0.2s, color 0.2s;
-  font-size: 18px; /* Increased icon size */
+  font-size: 18px;
 }
 
 .btn-delete:hover {
@@ -139,7 +140,6 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
   margin-bottom: 15px; 
 }
 
-/* [NEW] Wrapper for each item/set meal */
 .order-item-wrapper {
   padding: 5px 0;
   border-bottom: 1px solid #f5f5f5;
@@ -168,7 +168,6 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
   color: #666;
 }
 
-
 .order-details {
     border-top: 1px solid #f0f0f0;
     padding-top: 15px;
@@ -183,7 +182,7 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
 }
 
 .order-meta p {
-  margin: 0; /* Remove default margin */
+  margin: 0;
   font-size: 14px;
   color: #777;
   display: flex;
@@ -192,16 +191,16 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
 }
 
 .order-details p.total {
-  font-size: 18px; /* Increased font size */
+  font-size: 18px;
   font-weight: bold;
   color: #333;
   margin: 0;
-  text-align: center; /* Centered text */
+  text-align: center;
 }
 
 .order-card-actions {
   display: flex;
-  justify-content: flex-end; /* Modified for right alignment */
+  justify-content: flex-end;
   align-items: center;
   padding: 10px 15px;
   background-color: #f9fafb;
@@ -209,9 +208,9 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
 }
 
 .order-status {
-  font-size: 16px; /* Increased font size */
+  font-size: 16px;
   font-weight: bold;
-  padding: 6px 14px; /* Increased padding */
+  padding: 6px 14px;
   border-radius: 99px;
   color: #fff;
 }
@@ -222,7 +221,7 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
 
 .action-buttons {
   display: flex;
-  gap: 15px; /* Increased gap for better spacing */
+  gap: 15px;
 }
 
 .btn {
@@ -237,8 +236,8 @@ const updateStatus = (orderId: string, newStatus: Order['status']) => {
 }
 
 .btn-sm {
-  padding: 10px 18px; /* Significantly increased padding */
-  font-size: 16px;   /* Increased font size for readability */
+  padding: 10px 18px;
+  font-size: 16px;
 }
 
 .btn-success { background-color: #28a745; color: #fff; }

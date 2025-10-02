@@ -2,68 +2,75 @@ import { defineStore } from 'pinia';
 import { ref, watch, computed } from 'vue';
 import { v4 as uuidv4 } from 'uuid';
 
-const STORAGE_KEY = '向天泓咖啡廳_優惠設定_v2';
+const STORAGE_KEY = '向天泓咖啡廳_優惠設定_v3'; // 版本提升
 
-// 1. 定義優惠活動的類型
+// 1. 優惠活動類型不變
 export type PromotionType = 'SINGLE_ITEM_DEAL' | 'SPEND_AND_DISCOUNT' | 'SPEND_AND_GET';
 
 // 2. 定義每種優惠活動的具體結構
 export interface BasePromotion {
   id: string;
   enabled: boolean;
-  name: string; // 活動名稱，例如 "主廚推薦特餐"
+  name: string; 
   type: PromotionType;
+}
+
+// [FIX-4.1] 重構 SingleItemDeal 的資料結構
+export interface DealItem {
+  itemId: string | null; // 商品 ID
+  discountPrice: number | null; // 折扣後的價格
 }
 
 export interface SingleItemDeal extends BasePromotion {
   type: 'SINGLE_ITEM_DEAL';
-  itemId: string; // 商品 ID
-  discountPrice: number; // 折扣後的價格
+  // items 陣列，包含多個獨立的優惠品項
+  items: [DealItem, DealItem]; 
 }
 
 export interface SpendAndDiscount extends BasePromotion {
   type: 'SPEND_AND_DISCOUNT';
-  threshold: number; // 消費門檻
-  discount: number; // 折扣百分比 (例如 85 代表 85 折)
+  threshold: number; 
+  discount: number; 
 }
 
 export interface SpendAndGet extends BasePromotion {
   type: 'SPEND_AND_GET';
-  threshold: number; // 消費門檻
-  giftName: string; // 贈品名稱
+  threshold: number; 
+  giftName: string; 
 }
 
-// 3. 使用聯合類型來代表任何一種可能的優惠活動
 export type Promotion = SingleItemDeal | SpendAndDiscount | SpendAndGet;
 
-// 4. State 的結構改為一個優惠活動的陣列
 interface PromotionsState {
   promotions: Promotion[];
 }
 
-// 5. 預設狀態，現在是一個包含多個活動的陣列
+// 預設狀態更新
 const defaultState: PromotionsState = {
   promotions: [
     {
       id: 'promo-1',
       enabled: true,
-      name: '蕃茄牛奶鍋特價',
+      name: '單品特價活動',
       type: 'SINGLE_ITEM_DEAL',
-      itemId: 'hpt01', // 假設這是蕃茄牛奶鍋(雞肉)的ID
-      discountPrice: 350,
+      // [FIX-4.1] 更新預設資料以符合新結構
+      items: [
+        { itemId: 'hpt01', discountPrice: 350 },
+        { itemId: null, discountPrice: null }, // 第二個位置留空
+      ],
     },
     {
       id: 'promo-2',
       enabled: true,
-      name: '滿千八八折',
+      name: '滿額折扣活動',
       type: 'SPEND_AND_DISCOUNT',
       threshold: 1000,
-      discount: 88, // 88 折
+      discount: 90, // 9 折
     },
     {
       id: 'promo-3',
-      enabled: false, // 預設關閉
-      name: '滿600送甜點',
+      enabled: false, 
+      name: '滿額贈品活動',
       type: 'SPEND_AND_GET',
       threshold: 600,
       giftName: '主廚精選甜點一份',
@@ -72,23 +79,22 @@ const defaultState: PromotionsState = {
 };
 
 export const usePromotionsStore = defineStore('promotions', () => {
-  // 6. State 現在是一個優惠活動的 Ref 陣列
   const promotions = ref<Promotion[]>(loadState());
 
   function loadState(): Promotion[] {
     try {
       const savedStateJSON = localStorage.getItem(STORAGE_KEY);
       if (savedStateJSON) {
-        // 簡單地解析回來即可，因為我們有預設值
+        // 由於結構變動較大，直接返回解析後的存檔，或在未來加入更複雜的遷移邏輯
         return JSON.parse(savedStateJSON);
       }
     } catch (error) {
       console.error("無法讀取優惠設定:", error);
     }
+    // 如果沒有存檔或讀取失敗，返回全新的預設值
     return defaultState.promotions;
   }
 
-  // 7. Watcher 自動儲存到 localStorage
   watch(
     promotions,
     (newPromotions) => {
@@ -101,7 +107,6 @@ export const usePromotionsStore = defineStore('promotions', () => {
     { deep: true }
   );
 
-  // 8. Getters / Computed Properties
   const allPromotions = computed(() => promotions.value);
   const activePromotions = computed(() => promotions.value.filter(p => p.enabled));
 
@@ -109,11 +114,10 @@ export const usePromotionsStore = defineStore('promotions', () => {
     return promotions.value.find(p => p.id === id);
   }
 
-  // 9. Actions - 新的管理功能
   function addPromotion(newPromoData: Omit<Promotion, 'id'>) {
     const newPromotion: Promotion = {
       ...newPromoData,
-      id: uuidv4(), // 使用 uuid 產生唯一的 ID
+      id: uuidv4(),
     } as Promotion;
     promotions.value.push(newPromotion);
   }
@@ -121,12 +125,10 @@ export const usePromotionsStore = defineStore('promotions', () => {
   function updatePromotion(id: string, updates: Partial<Promotion>) {
     const index = promotions.value.findIndex(p => p.id === id);
     if (index !== -1) {
-      // 確保 id 和 type 不被覆蓋
-      const { id: originalId, type: originalType, ...restOfUpdates } = updates;
-      promotions.value[index] = { 
-        ...promotions.value[index], 
-        ...restOfUpdates 
-      };
+        const currentPromo = promotions.value[index];
+        // 使用 structuredClone 進行深度合併，以處理巢狀物件
+        const updatedPromo = { ...currentPromo, ...updates };
+        promotions.value.splice(index, 1, updatedPromo);
     }
   }
 
@@ -141,9 +143,8 @@ export const usePromotionsStore = defineStore('promotions', () => {
     }
   }
 
-  // 10. 導出所有需要的狀態和函式
   return {
-    promotions: allPromotions, // 導出 allPromotions 而不是原始的 ref
+    promotions: allPromotions,
     activePromotions,
     getPromotionById,
     addPromotion,

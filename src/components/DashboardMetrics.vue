@@ -25,11 +25,12 @@ const { totalRevenue, pendingRevenue, totalOrdersCount } = storeToRefs(ordersSto
 </script>
 
 <style scoped>
+/* [FIX-7] 縮減底部間距 */
 .metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
-  margin-bottom: 30px;
+  margin-bottom: 20px; /* 縮減間距 */
 }
 
 .metric-card {

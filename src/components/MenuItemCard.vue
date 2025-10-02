@@ -7,10 +7,11 @@
       <h3>{{ item.name }}</h3>
       <p>{{ item.category }}</p>
     </div>
+    <!-- [FIX-4.3] 更新價格顯示邏輯 -->
     <div class="item-price">
-      <template v-if="specialOffer">
+      <template v-if="specialOfferPrice !== null">
         <span class="original-price">NT${{ item.price }}</span>
-        <span class="discount-price">NT${{ specialOffer.discountPrice }}</span>
+        <span class="discount-price">NT${{ specialOfferPrice }}</span>
       </template>
       <template v-else>
         <span class="price">NT${{ item.price }}</span>
@@ -31,11 +32,24 @@ const emit = defineEmits(['addToCart']);
 const promotionsStore = usePromotionsStore();
 const { activePromotions } = storeToRefs(promotionsStore);
 
-const specialOffer = computed(() => {
-  const deal = activePromotions.value.find(
-    (p) => p.type === 'SINGLE_ITEM_DEAL' && (p as SingleItemDeal).itemId === props.item.id
-  ) as SingleItemDeal | undefined;
-  return deal;
+// [FIX-4.3] 更新 computed 屬性，以找到對應的獨立優惠價
+const specialOfferPrice = computed(() => {
+  // 1. 找到所有啟用的「單品特價」活動
+  const singleItemDeals = activePromotions.value.filter(
+    p => p.type === 'SINGLE_ITEM_DEAL'
+  ) as SingleItemDeal[];
+
+  // 2. 遍歷所有活動，在每個活動的 items 陣列中尋找匹配的品項
+  for (const deal of singleItemDeals) {
+    const foundItem = deal.items.find(d => d.itemId === props.item.id);
+    // 3. 如果找到，並且價格有效，則返回該價格
+    if (foundItem && foundItem.discountPrice !== null) {
+      return foundItem.discountPrice;
+    }
+  }
+
+  // 4. 如果都沒找到，返回 null
+  return null;
 });
 </script>
 
@@ -48,7 +62,7 @@ const specialOffer = computed(() => {
   display: flex;
   flex-direction: column;
   transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
-  cursor: pointer; /* <--- 重要：滑鼠指標變為手形 */
+  cursor: pointer; 
 }
 
 .menu-item-card:hover {
@@ -76,9 +90,9 @@ const specialOffer = computed(() => {
 }
 
 .item-info {
-  padding: 20px 20px 0 20px; /* 調整底部 padding */
+  padding: 20px 20px 0 20px; 
   text-align: center;
-  flex-grow: 1; /* <--- 讓 info 區塊佔據多餘空間 */
+  flex-grow: 1; 
 }
 
 .item-info h3 {
@@ -95,7 +109,7 @@ const specialOffer = computed(() => {
 }
 
 .item-price {
-  padding: 15px 20px 20px 20px; /* 價格的 padding */
+  padding: 15px 20px 20px 20px; 
   text-align: center;
   font-weight: bold;
 }
@@ -107,13 +121,13 @@ const specialOffer = computed(() => {
 
 .original-price {
   font-size: 16px;
-  color: #a0aec0; /* 淺灰色 */
-  text-decoration: line-through; /* <--- 核心：刪除線 */
+  color: #a0aec0; 
+  text-decoration: line-through; 
   margin-right: 10px;
 }
 
 .discount-price {
-  color: #e53e3e; /* <--- 醒目的紅色 */
+  color: #e53e3e; 
 }
 
 </style>

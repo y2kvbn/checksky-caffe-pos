@@ -27,19 +27,21 @@ defineEmits(['setView', 'logout']);
 </script>
 
 <style scoped>
+/* [FIX-6] 微調 padding 和標題樣式以達成最終對齊 */
 .sidebar {
   grid-area: sidebar;
-  padding: 30px;
+  padding: 22px 30px 30px 30px; /* 微調頂部 padding */
   background-color: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   z-index: 3;
   position: relative;
+  border-right: 1px solid #e0e0e0; /* 新增右邊框以區分區域 */
 }
 
 .sidebar-title {
-  font-size: 24px;
+  font-size: 31px; /* 與 Header Logo 字體大小一致 */
   font-weight: bold;
   color: var(--text-dark);
   margin-bottom: 30px;
@@ -110,12 +112,12 @@ defineEmits(['setView', 'logout']);
 }
 
 .btn-tertiary:hover {
-    background-color: #e2e6ea; /* A slightly darker hover for the logout button */
+    background-color: #e2e6ea;
 }
 
 .btn-logout {
-  background-color: #f8d7da; /* A subtle red to indicate a destructive action */
-  color: #721c24; /* Dark red text */
+  background-color: #f8d7da; 
+  color: #721c24; 
   border: 1px solid #f5c6cb;
 }
 

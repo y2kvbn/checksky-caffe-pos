@@ -23,7 +23,15 @@
         :cartItems="cartCalculation.items"
         :subtotal="cartCalculation.subtotal"
         :total="cartCalculation.total"
-        :appliedDeals="cartCalculation.appliedPromotions.map(p => p.name)"
+        :appliedDeals="cartCalculation.appliedPromotions.map(p => {
+          if (p.type === 'SPEND_AND_DISCOUNT') {
+            return `滿${p.threshold}元${p.discount / 10}折`;
+          }
+          if (p.type === 'SPEND_AND_GET') {
+            return `滿${p.threshold}元贈「${p.giftName}」`;
+          }
+          return p.name;
+        })"
         :gifts="cartCalculation.gifts"
         :promotionHints="cartCalculation.promotionHints"
         :selectedTable="selectedTable" 
@@ -39,17 +47,12 @@
         <div class="modal-content">
             <h3>選擇付款方式</h3>
             <div class="payment-options">
-                <!-- Cash Option -->
                 <button class="payment-option btn-cash" @click="processOrder('cash')">
                     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><circle cx="12" cy="12" r="4"></circle></svg>
                     <span>現金結帳</span>
                 </button>
-                <!-- LinePay Option -->
                 <button class="payment-option btn-linepay" @click="processOrder('linepay')">
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M17 2H7C5.89543 2 5 2.89543 5 4V20C5 21.1046 5.89543 22 7 22H17C18.1046 22 19 21.1046 19 20V4C19 2.89543 18.1046 2 17 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M9 7H10V8H9V7Z" fill="currentColor"/><path d="M11 7H12V8H11V7Z" fill="currentColor"/><path d="M13 7H15V8H13V7Z" fill="currentColor"/><path d="M9 9H10V11H9V9Z" fill="currentColor"/><path d="M11 9H12V10H11V9Z" fill="currentColor"/><path d="M13 9H14V10H13V9Z" fill="currentColor"/><path d="M14 10H15V11H14V10Z" fill="currentColor"/><path d="M9 12H11V13H9V12Z" fill="currentColor"/><path d="M12 12H13V14H12V12Z" fill="currentColor"/><path d="M14 12H15V13H14V12Z" fill="currentColor"/><path d="M10 14H11V15H10V14Z" fill="currentColor"/><path d="M13 14H14V15H13V14Z" fill="currentColor"/><path d="M9 16H10V17H9V16Z" fill="currentColor"/><path d="M11 16H13V17H11V16Z" fill="currentColor"/><path d="M14 16H15V17H14V16Z" fill="currentColor"/>
-                    </svg>
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 2H7C5.89543 2 5 2.89543 5 4V20C5 21.1046 5.89543 22 7 22H17C18.1046 22 19 21.1046 19 20V4C19 2.89543 18.1046 2 17 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 7H10V8H9V7Z" fill="currentColor"/><path d="M11 7H12V8H11V7Z" fill="currentColor"/><path d="M13 7H15V8H13V7Z" fill="currentColor"/><path d="M9 9H10V11H9V9Z" fill="currentColor"/><path d="M11 9H12V10H11V9Z" fill="currentColor"/><path d="M13 9H14V10H13V9Z" fill="currentColor"/><path d="M14 10H15V11H14V10Z" fill="currentColor"/><path d="M9 12H11V13H9V12Z" fill="currentColor"/><path d="M12 12H13V14H12V12Z" fill="currentColor"/><path d="M14 12H15V13H14V12Z" fill="currentColor"/><path d="M10 14H11V15H10V14Z" fill="currentColor"/><path d="M13 14H14V15H13V14Z" fill="currentColor"/><path d="M9 16H10V17H9V16Z" fill="currentColor"/><path d="M11 16H13V17H11V16Z" fill="currentColor"/><path d="M14 16H15V17H14V16Z" fill="currentColor"/></svg>
                     <span>LinePay</span>
                 </button>
             </div>
@@ -66,7 +69,7 @@ import { ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useOrdersStore, type OrderItem } from '../stores/orders';
 import { useMenuStore, type MenuItem } from '../stores/menu';
-import { usePromotionsStore, type SingleItemDeal, type SpendAndDiscount, type SpendAndGet } from '../stores/promotions';
+import { usePromotionsStore, type SingleItemDeal, type SpendAndDiscount, type SpendAndGet, type Promotion } from '../stores/promotions';
 import SetMealModal from './SetMealModal.vue';
 import ReservationManagement from './ReservationManagement.vue';
 import SelectTableModal from './SelectTableModal.vue';
@@ -75,7 +78,6 @@ import CategorySidebar from './CategorySidebar.vue';
 import MenuItemCard from './MenuItemCard.vue';
 import CartSidebar from './CartSidebar.vue';
 
-// 購物車項目的型別，現在也包含 subItems
 interface CartItem extends MenuItem {
   quantity: number;
   cartItemId: string; 
@@ -115,35 +117,54 @@ watch(allCategories, (newCategories) => {
   }
 }, { immediate: true });
 
-// 購物車計算邏輯現在也考慮到了層級結構
+// [FIX-4.3] 更新購物車計算邏輯，以處理獨立的單品優惠價
 const cartCalculation = computed(() => {
-  const subtotal = cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  let subtotal = 0;
   let totalDiscount = 0;
-  const appliedPromotions: { name: string; amount: number }[] = [];
+  const appliedPromotions: Promotion[] = [];
   const gifts: string[] = [];
   const promotionHints: string[] = [];
-  
+
   const singleItemDeals = activePromotions.value.filter(p => p.type === 'SINGLE_ITEM_DEAL') as SingleItemDeal[];
   const spendAndDiscountDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_DISCOUNT') as SpendAndDiscount[];
   const spendAndGetDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_GET') as SpendAndGet[];
 
-  const itemsWithSingleItemDiscount = new Set<string>();
-  cart.value.forEach(item => {
-    // 套餐的主餐不應該單獨享受折扣
-    if (item.subItems && item.subItems.length > 0) return;
+  const cartItemsWithPrice = cart.value.map(item => {
+    let originalPrice = item.price;
+    let finalPrice = item.price;
+    let itemDiscount = 0;
+    let appliedDeal: SingleItemDeal | null = null;
 
-    const applicableDeal = singleItemDeals.find(deal => deal.itemId === item.id);
-    if (applicableDeal) {
-      const discountAmount = (item.price - applicableDeal.discountPrice) * item.quantity;
-      totalDiscount += discountAmount;
-      appliedPromotions.push({ name: applicableDeal.name, amount: discountAmount });
-      itemsWithSingleItemDiscount.add(item.id);
+    // 遍歷所有單品優惠活動
+    for (const deal of singleItemDeals) {
+      const dealItem = deal.items.find(d => d.itemId === item.id && d.discountPrice != null);
+      if (dealItem) {
+        // 套用折扣，並確保折扣後的價格不會被重複計算
+        finalPrice = dealItem.discountPrice!;
+        itemDiscount = (originalPrice - finalPrice) * item.quantity;
+        appliedDeal = deal;
+        break; // 找到第一個適用的優惠就停止
+      }
     }
+    
+    subtotal += originalPrice * item.quantity;
+    if (itemDiscount > 0 && appliedDeal) {
+        totalDiscount += itemDiscount;
+        if (!appliedPromotions.find(p => p.id === appliedDeal!.id)) {
+            appliedPromotions.push(appliedDeal!);
+        }
+    }
+
+    return {
+      ...item,
+      calculatedPrice: finalPrice, // 用於計算剩餘金額
+      isDiscountedBySingleDeal: itemDiscount > 0
+    };
   });
 
-  const remainingItemsTotal = cart.value
-    .filter(item => !itemsWithSingleItemDiscount.has(item.id))
-    .reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const remainingItemsTotal = cartItemsWithPrice
+    .filter(item => !item.isDiscountedBySingleDeal)
+    .reduce((sum, item) => sum + item.calculatedPrice * item.quantity, 0);
 
   let spendDiscountApplied = false;
   if (spendAndDiscountDeals.length > 0) {
@@ -154,7 +175,9 @@ const cartCalculation = computed(() => {
     if (bestDeal) {
       const discountValue = remainingItemsTotal * (1 - bestDeal.discount / 100);
       totalDiscount += discountValue;
-      appliedPromotions.push({ name: bestDeal.name, amount: discountValue });
+      if (!appliedPromotions.find(p => p.id === bestDeal.id)) {
+          appliedPromotions.push(bestDeal);
+      }
       spendDiscountApplied = true;
     }
   }
@@ -167,8 +190,8 @@ const cartCalculation = computed(() => {
 
     if (applicableGift) {
       gifts.push(applicableGift.giftName);
-      if (!appliedPromotions.some(p => p.name === applicableGift.name)) {
-          appliedPromotions.push({ name: applicableGift.name, amount: 0 });
+      if (!appliedPromotions.find(p => p.id === applicableGift.id)) {
+          appliedPromotions.push(applicableGift);
       }
       giftApplied = true;
     }
@@ -180,7 +203,8 @@ const cartCalculation = computed(() => {
       .sort((a, b) => a.threshold - b.threshold)[0];
     if (nextDiscountDeal) {
       const difference = nextDiscountDeal.threshold - subtotal;
-      promotionHints.push(`再消費 NT$${difference} 即可享有「${nextDiscountDeal.name}」！`);
+      const hint = `再消費 NT$${difference} 即可享有「滿${nextDiscountDeal.threshold}元${nextDiscountDeal.discount / 10}折」優惠！`;
+      promotionHints.push(hint);
     }
   }
 
@@ -190,7 +214,8 @@ const cartCalculation = computed(() => {
       .sort((a, b) => a.threshold - b.threshold)[0];
     if (nextGiftDeal) {
       const difference = nextGiftDeal.threshold - subtotal;
-      promotionHints.push(`再消費 NT$${difference} 即可獲得「${nextGiftDeal.giftName}」！`);
+      const hint = `再消費 NT$${difference} 即可獲得「${nextGiftDeal.giftName}」！`;
+      promotionHints.push(hint);
     }
   }
 
@@ -221,11 +246,10 @@ const addToCart = (item: MenuItem) => {
   }
 };
 
-// [REFACTORED] - 處理來自 SetMealModal 的完整套餐物件
 const handleSetMealConfirm = (mealPackage: CartItem) => {
   cart.value.push({ 
       ...mealPackage, 
-      cartItemId: `cart-item-${cartIdCounter++}` // 賦予一個唯一的購物車 ID
+      cartItemId: `cart-item-${cartIdCounter++}`
   });
   isSetMealModalVisible.value = false;
 };
@@ -262,14 +286,11 @@ const handleTableSelected = (table: any) => {
   isTableModalVisible.value = false;
 };
 
-// [REFACTORED] - 結帳時傳遞完整的層級結構
 const processOrder = (paymentMethod: 'cash' | 'linepay') => {
   const { items, subtotal, total, discount, appliedPromotions, gifts } = cartCalculation.value;
 
-  // 複製一份購物車項目以處理贈品
   let finalCartItems: OrderItem[] = JSON.parse(JSON.stringify(items));
 
-  // 將贈品作為獨立項目加入
   gifts.forEach(giftName => {
     const giftItem = menuItems.value.find(item => item.name === giftName);
     finalCartItems.push({ 
@@ -286,7 +307,10 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
     subtotal,
     discount,
     total,
-    appliedPromotions,
+    appliedPromotions: appliedPromotions.map(p => ({ 
+      name: p.type === 'SPEND_AND_DISCOUNT' ? `滿${p.threshold}享${p.discount/10}折` : p.name,
+      amount: 0 
+    })),
     paymentMethod: paymentMethod,
     tableNumber: selectedTable.value ? selectedTable.value.name : undefined
   };
@@ -302,135 +326,22 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
 </script>
 
 <style scoped>
-.pos-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100vw;
-  position: fixed;
-  top: 0;
-  left: 0;
-  background-color: #f8f9fa;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-}
-
-.pos-main {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  flex-grow: 1;
-  gap: 25px;
-  padding: 25px;
-  overflow: hidden;
-}
-
-.pos-main.single-column-layout {
-  grid-template-columns: 1fr;
-}
-
-.main-content {
-  overflow-y: auto;
-}
-
-.single-column-layout > .main-content {
-  grid-column: 1 / -1;
-}
-
-.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 25px;
-  align-content: start;
-}
-
-/* --- Checkout Modal Styles --- */
-
-.checkout-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: #fff;
-  padding: 40px;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  text-align: center;
-  width: 90%;
-  max-width: 600px;
-  transform: scale(1.05);
-}
-
-.modal-content h3 {
-  margin-top: 0;
-  margin-bottom: 30px;
-  font-size: 28px;
-  color: var(--text-dark);
-}
-
-.payment-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 30px;
-  margin: 30px 0;
-}
-
-.payment-option {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 30px 20px;
-  border-radius: 15px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  color: white;
-  font-size: 22px;
-  font-weight: 600;
-}
-
-.payment-option svg {
-  margin-bottom: 15px;
-  width: 60px;
-  height: 60px;
-}
-
-.payment-option:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-}
-
-.btn-cash {
-  background-color: #48bb78;
-}
-
-.btn-cash:hover {
-    background-color: #3f9e68;
-}
-
-.btn-linepay {
-  background-color: #00B900;
-}
-
-.btn-linepay:hover {
-    background-color: #00a300;
-}
-
-
-.btn-secondary {
-  background-color: #a0aec0;
-  color: white;
-  width: 100%;
-  padding: 15px;
-  font-size: 18px;
-  margin-top: 20px;
-}
+.pos-container { display: flex; flex-direction: column; height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; background-color: #f8f9fa; font-family: 'Helvetica Neue', Arial, sans-serif; }
+.pos-main { display: grid; grid-template-columns: auto 1fr auto; flex-grow: 1; gap: 25px; padding: 25px; overflow: hidden; }
+.pos-main.single-column-layout { grid-template-columns: 1fr; }
+.main-content { overflow-y: auto; }
+.single-column-layout > .main-content { grid-column: 1 / -1; }
+.menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; align-content: start; }
+.checkout-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background-color: #fff; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); text-align: center; width: 90%; max-width: 600px; transform: scale(1.05); }
+.modal-content h3 { margin-top: 0; margin-bottom: 30px; font-size: 28px; color: var(--text-dark); }
+.payment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin: 30px 0; }
+.payment-option { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; border-radius: 15px; border: 2px solid transparent; cursor: pointer; transition: all 0.3s ease; color: white; font-size: 22px; font-weight: 600; }
+.payment-option svg { margin-bottom: 15px; width: 60px; height: 60px; }
+.payment-option:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+.btn-cash { background-color: #48bb78; }
+.btn-cash:hover { background-color: #3f9e68; }
+.btn-linepay { background-color: #00B900; }
+.btn-linepay:hover { background-color: #00a300; }
+.btn-secondary { background-color: #a0aec0; color: white; width: 100%; padding: 15px; font-size: 18px; margin-top: 20px; }
 </style>

@@ -61,7 +61,7 @@ const goToReservations = () => {
 const handleOpenSettlement = async () => {
   if (activeView.value !== 'DashboardHome') {
     activeView.value = 'DashboardHome';
-    await nextTick(); // Wait for the component to be rendered
+    await nextTick();
   }
   dashboardHomeRef.value?.openSettlementModal();
 };
@@ -69,12 +69,15 @@ const handleOpenSettlement = async () => {
 </script>
 
 <style scoped>
+/* [FIX-6] 重構 Grid 結構以匹配設計圖 */
 .dashboard {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  /* 左側邊欄寬度固定，右側內容佔滿剩餘空間 */
+  grid-template-columns: 260px 1fr; 
+  /* 頂部 Header 高度自適應，主內容區域佔滿剩餘高度 */
   grid-template-rows: auto 1fr;
   grid-template-areas:
-    "header header"
+    "sidebar header"
     "sidebar main";
   height: 100vh;
   width: 100vw;
@@ -82,7 +85,6 @@ const handleOpenSettlement = async () => {
   top: 0;
   left: 0;
   background-color: #f8f9fa;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
 .background-image {
