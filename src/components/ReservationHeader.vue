@@ -22,26 +22,27 @@ defineEmits<{
 
 <style scoped>
 .reservation-header {
-  position: relative;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 25px;
 }
 
 .date-navigation {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  flex-grow: 1;
   display: flex;
+  justify-content: center;
   align-items: center;
   gap: 15px;
+  position: relative;
+  left: 5%;
 }
 
 .current-date {
   font-size: 26px;
   font-weight: 600;
   color: var(--text-dark);
+  white-space: nowrap; 
 }
 
 .nav-btn,
@@ -57,6 +58,7 @@ defineEmits<{
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  flex-shrink: 0;
 }
 
 .nav-btn:hover,
@@ -83,6 +85,7 @@ defineEmits<{
   justify-content: center;
   gap: 8px;
   padding: 12px 22px;
+  flex-shrink: 0;
 }
 
 .btn-primary {
