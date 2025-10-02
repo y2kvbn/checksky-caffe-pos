@@ -117,7 +117,6 @@ watch(allCategories, (newCategories) => {
   }
 }, { immediate: true });
 
-// [DEFINITIVE FIX] A clear, correct, and final implementation of the cart calculation logic.
 const cartCalculation = computed(() => {
   const appliedPromotions: Promotion[] = [];
   const gifts: string[] = [];
@@ -127,7 +126,6 @@ const cartCalculation = computed(() => {
   const spendAndDiscountDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_DISCOUNT') as SpendAndDiscount[];
   const spendAndGetDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_GET') as SpendAndGet[];
 
-  // Tier 1: Create a processed cart for display, applying single-item deals.
   const processedCartItems = cart.value.map(item => {
     let priceAfterSingleItemDeal = item.price;
     for (const deal of singleItemDeals) {
@@ -142,23 +140,21 @@ const cartCalculation = computed(() => {
     return { ...item, price: priceAfterSingleItemDeal, originalPrice: item.price };
   });
 
-  // Tier 2: Calculate the subtotal based on post-single-item-deal prices.
   const subtotal = processedCartItems.reduce((sum, item) => {
     const mainItemTotal = item.price * item.quantity;
     const subItemsTotal = (item.subItems || []).reduce((subSum, sub) => subSum + sub.price * sub.quantity, 0);
     return sum + mainItemTotal + subItemsTotal;
   }, 0);
 
-  // Tier 3: Apply global discounts to get the final payable total.
-  let finalPayableTotal = subtotal; // Start with the subtotal.
+  let finalPayableTotal = subtotal;
   let spendDiscountApplied = false;
   if (spendAndDiscountDeals.length > 0) {
     const bestDeal = spendAndDiscountDeals
       .filter(deal => subtotal >= deal.threshold)
-      .sort((a, b) => a.discount - b.discount)[0]; 
+      .sort((a, b) => (a.discount / 100) - (b.discount / 100))[0];
 
     if (bestDeal) {
-      const discountMultiplier = (100 - bestDeal.discount) / 100;
+      const discountMultiplier = bestDeal.discount / 100;
       finalPayableTotal = subtotal * discountMultiplier;
       spendDiscountApplied = true;
       if (!appliedPromotions.find(p => p.id === bestDeal.id)) {
@@ -167,10 +163,8 @@ const cartCalculation = computed(() => {
     }
   }
 
-  // Calculate the total discount amount for record-keeping.
   const totalDiscount = subtotal - finalPayableTotal;
 
-  // Tier 4: Handle gift promotions.
   let giftApplied = false;
   if (spendAndGetDeals.length > 0) {
     const applicableGift = spendAndGetDeals.filter(deal => subtotal >= deal.threshold).sort((a, b) => b.threshold - a.threshold)[0];
@@ -183,7 +177,6 @@ const cartCalculation = computed(() => {
     }
   }
 
-  // Tier 5: Generate hints for the user.
   if (!spendDiscountApplied && spendAndDiscountDeals.length > 0) {
     const nextDiscountDeal = spendAndDiscountDeals.filter(deal => subtotal < deal.threshold).sort((a, b) => a.threshold - b.threshold)[0];
     if (nextDiscountDeal) {
@@ -197,12 +190,11 @@ const cartCalculation = computed(() => {
     }
   }
 
-  // Return the definitive, correct values.
   return {
     items: processedCartItems,
     subtotal: Math.round(subtotal),
-    total: Math.round(finalPayableTotal),      // ABSOLUTELY a.k.a the final payable amount.
-    discount: Math.round(totalDiscount),      // The total amount saved.
+    total: Math.round(finalPayableTotal),
+    discount: Math.round(totalDiscount),
     appliedPromotions,
     gifts,
     promotionHints,
@@ -285,7 +277,6 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
       let amount = 0;
       if (p.type === 'SPEND_AND_DISCOUNT') {
           name = `滿${p.threshold}享${p.discount/10}折`;
-          // The amount for this specific promo is the total discount.
           amount = discount;
       } else if (p.type === 'SINGLE_ITEM_DEAL') {
           const itemInCart = items.find(i => i.id === p.items[0].itemId);

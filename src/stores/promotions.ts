@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, watch, computed } from 'vue';
 import { v4 as uuidv4 } from 'uuid';
 
-const STORAGE_KEY = '向天泓咖啡廳_優惠設定_v3'; // 版本提升
+const STORAGE_KEY = '向天泓咖啡廳_優惠設定_v4'; // 版本提升
 
 // 1. 優惠活動類型不變
 export type PromotionType = 'SINGLE_ITEM_DEAL' | 'SPEND_AND_DISCOUNT' | 'SPEND_AND_GET';
@@ -65,7 +65,7 @@ const defaultState: PromotionsState = {
       name: '滿額折扣活動',
       type: 'SPEND_AND_DISCOUNT',
       threshold: 1000,
-      discount: 90, // 9 折
+      discount: 90, // 9 折, 代表支付 90%
     },
     {
       id: 'promo-3',
