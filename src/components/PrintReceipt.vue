@@ -66,7 +66,7 @@
       <!-- 頁尾 -->
       <footer class="receipt-footer">
         <p>此單據內容僅供參考, 不作為交易憑據</p>
-        <p>謝謝光臨</p>
+        <p>{{ settingsStore.receiptNotes }}</p>
       </footer>
     </div>
   </div>
@@ -74,6 +74,9 @@
 
 <script setup lang="ts">
 import type { Order } from '../stores/orders';
+import { useSettingsStore } from '../stores/settings';
+
+const settingsStore = useSettingsStore();
 
 const props = defineProps<{ 
   order: Order 

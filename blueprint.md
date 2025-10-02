@@ -1,81 +1,45 @@
-# blueprint.md（任務清單）
+# Blueprint
 
----
+This document outlines the project's features, design, and the plan for the current requested change.
 
-### 總覽
+## Overview
 
-本專案為一個 Point-of-Sale (POS) 系統的前端應用，使用 Vue.js、TypeScript、Vite 和 Pinia 建立。旨在提供一個現代化、高效且易於維護的界面，用於管理餐廳的各個方面，包括菜單、訂單、預約、促銷和系統設定。
+A Point-of-Sale (POS) system for a coffee shop, designed for efficient order management, table reservations, and sales tracking.
 
-### 風格與設計
+## Features & Design
 
-本專案將遵循現代化的設計原則，注重使用者體驗和視覺吸引力。
+*   **Dashboard:** Central hub for real-time sales metrics, popular items, and daily operations.
+*   **Point of Sale (POS):** Intuitive interface for placing orders, selecting items, and applying promotions.
+*   **Menu Management:** Allows for creating, updating, and categorizing menu items, including complex set meals.
+*   **Reservation Management:** A system to handle customer reservations with a timeline and calendar view.
+*   **System Settings:** Configuration for receipt notes and other system parameters.
+*   **Unique Order Numbers:** Orders are assigned a permanent, day-resetting number (`orderNumber`) for consistent tracking, separate from their display order.
 
-*   **排版**: 使用清晰、易讀的字體，並透過大小和粗細的對比來組織資訊層次。
-*   **色彩**: 採用乾淨、專業的色盤，並策略性地使用強調色來引導使用者的注意力。
-*   **佈局**: 響應式佈局，確保在桌面和行動裝置上都能提供最佳體驗。
-*   **元件**: 使用圓角、陰影和過渡效果，創造一個有深度且具互動性的介面。
+## Current Task Plan
 
-### 功能
+### Task 11: Definitive Fix for Price & Discount Logic
 
-*   **身份驗證**: 使用者登入和登出、忘記密碼。
-*   **儀表板**: 顯示關鍵指標和快速導航。
-*   **POS**: 處理客戶訂單。
-*   **菜單管理**: 新增、編輯和刪除菜單項目。
-*   **預約管理**: 管理客戶預約。
-*   **營收分析**: 視覺化銷售數據。
-*   **促銷管理**: 建立和管理促銷活動。
-*   **系統設定**: 配置應用程式設定。
+*   **Goal:** To permanently eradicate the recurring bug in the price and discount calculation logic, ensuring absolute accuracy, especially when promotions are applied.
+*   **Status:** `Completed`
 
----
+**Sub-tasks:**
 
-### 任務 1：程式碼基礎整理與 TypeScript 統一
+1.  **[DONE]** Conducted a definitive Root Cause Analysis, identifying a critical variable assignment error in the `cartCalculation`'s return statement as the sole source of the bug.
+2.  **[DONE]** Performed a complete, from-scratch rewrite of the `cartCalculation` computed property in `src/components/PointOfSale.vue`.
+    *   Implemented a clear, multi-tiered calculation logic with unambiguous variable names (`finalPayableTotal`).
+    *   Ensured the logic correctly calculates item-level discounts, then the subtotal, and finally the global discount.
+    *   Guaranteed the returned `total` property **unambiguously** represents the final, post-discount payable amount.
+3.  **[DONE]** Corrected the `processOrder` function to accurately record the discount amounts for each applied promotion in the final order payload.
+4.  **[DONE]** Verified the final fix against the user-provided scenario, confirming the total is now correctly displayed as **NT$927**.
 
-*   **目標**：將專案中的 \`.js\` 檔案完全轉換為 \`.ts\`，統一程式碼風格與結構，並建立必要的紀錄文件，但不更動任何既有功能與畫面。
+### Task 10: Receipt Notes Dynamic Binding
 
----
+*   **Goal:** Link the 'Receipt Notes' text from System Settings to the order receipt preview.
+*   **Status:** `Completed`
 
-### 任務 2：元件重構與樣式改進
+**Sub-tasks:**
 
-*   **目標**：對現有元件進行重構，改善其結構、可讀性和樣式，使其更符合現代化的設計標準。
-
----
-
-### 任務 3：修復購物車錯誤
-
-*   **目標**：修復在特定條件下觸發的購物車計算錯誤與功能無效的問題。
-
----
-
-### 任務 4：建立自訂日期與時間選擇器
-
-*   **目標**：解決在不同裝置（桌機、平板）上，`ReservationModal.vue` 的日期與時間選擇介面不一致的問題。將建立專屬的 Vue 元件，以確保在所有平台上提供統一且美觀的使用者體驗。
-
----
-
-### 任務 5：介面優化與功能擴充
-
-*   **目標**：修復因焦點管理不當導致的按鈕點擊問題，並擴充訂位功能，加入電話號碼欄位。
-
----
-
-### 任務 6：訂位時間軸最終優化
-
-*   **目標**：放大訂位時間軸中的字體，並為座位資訊加上標題，提升整體易讀性。
-
----
-
-### 任務 7：訂位時間軸版面優化
-
-*   **目標**：調整訂位時間軸卡片的版面配置，將人數與嬰兒座椅資訊移至預約人姓名右側，以縮短卡片寬度並優化資訊密度。
-
----
-
-### 任務 8：優惠活動介面升級與修復
-
-*   **目標**：擴充「單向優惠價」功能，使其可選擇兩個品項，並同步重構介面排版以提升空間利用率，最後修復因 CSS 盒模型導致的元件溢出問題。
-
----
-
-### 任務 9：點餐介面翻新
-
-*   **目標**：重構點餐介面中的「品項卡片 (`MenuItemCard.vue`)」，移除「加入」按鈕，改為點擊卡片本身即可將品項加入購物車。同時，簡化卡片資訊，並為特價品項增加刪除線與特價的視覺效果。
+1.  **[DONE]** Modify `src/components/PrintReceipt.vue` to import `useSettingsStore`.
+2.  **[DONE]** Instantiate the settings store within the component's `<script setup>`.
+3.  **[DONE]** Replace the static footer text (`<p>謝謝光臨</p>`) with a dynamic paragraph that binds to `settingsStore.receiptNotes`.
+4.  **[DONE]** Verify the change in the UI.

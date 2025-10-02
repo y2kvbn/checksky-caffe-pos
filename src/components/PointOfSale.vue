@@ -117,10 +117,8 @@ watch(allCategories, (newCategories) => {
   }
 }, { immediate: true });
 
-// [FIX-4.3] 更新購物車計算邏輯，以處理獨立的單品優惠價
+// [DEFINITIVE FIX] A clear, correct, and final implementation of the cart calculation logic.
 const cartCalculation = computed(() => {
-  let subtotal = 0;
-  let totalDiscount = 0;
   const appliedPromotions: Promotion[] = [];
   const gifts: string[] = [];
   const promotionHints: string[] = [];
@@ -129,108 +127,88 @@ const cartCalculation = computed(() => {
   const spendAndDiscountDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_DISCOUNT') as SpendAndDiscount[];
   const spendAndGetDeals = activePromotions.value.filter(p => p.type === 'SPEND_AND_GET') as SpendAndGet[];
 
-  const cartItemsWithPrice = cart.value.map(item => {
-    let originalPrice = item.price;
-    let finalPrice = item.price;
-    let itemDiscount = 0;
-    let appliedDeal: SingleItemDeal | null = null;
-
-    // 遍歷所有單品優惠活動
+  // Tier 1: Create a processed cart for display, applying single-item deals.
+  const processedCartItems = cart.value.map(item => {
+    let priceAfterSingleItemDeal = item.price;
     for (const deal of singleItemDeals) {
       const dealItem = deal.items.find(d => d.itemId === item.id && d.discountPrice != null);
-      if (dealItem) {
-        // 套用折扣，並確保折扣後的價格不會被重複計算
-        finalPrice = dealItem.discountPrice!;
-        itemDiscount = (originalPrice - finalPrice) * item.quantity;
-        appliedDeal = deal;
-        break; // 找到第一個適用的優惠就停止
+      if (dealItem && dealItem.discountPrice < priceAfterSingleItemDeal) {
+        priceAfterSingleItemDeal = dealItem.discountPrice;
+        if (!appliedPromotions.find(p => p.id === deal.id)) {
+            appliedPromotions.push(deal);
+        }
       }
     }
-    
-    subtotal += originalPrice * item.quantity;
-    if (itemDiscount > 0 && appliedDeal) {
-        totalDiscount += itemDiscount;
-        if (!appliedPromotions.find(p => p.id === appliedDeal!.id)) {
-            appliedPromotions.push(appliedDeal!);
-        }
-    }
-
-    return {
-      ...item,
-      calculatedPrice: finalPrice, // 用於計算剩餘金額
-      isDiscountedBySingleDeal: itemDiscount > 0
-    };
+    return { ...item, price: priceAfterSingleItemDeal, originalPrice: item.price };
   });
 
-  const remainingItemsTotal = cartItemsWithPrice
-    .filter(item => !item.isDiscountedBySingleDeal)
-    .reduce((sum, item) => sum + item.calculatedPrice * item.quantity, 0);
+  // Tier 2: Calculate the subtotal based on post-single-item-deal prices.
+  const subtotal = processedCartItems.reduce((sum, item) => {
+    const mainItemTotal = item.price * item.quantity;
+    const subItemsTotal = (item.subItems || []).reduce((subSum, sub) => subSum + sub.price * sub.quantity, 0);
+    return sum + mainItemTotal + subItemsTotal;
+  }, 0);
 
+  // Tier 3: Apply global discounts to get the final payable total.
+  let finalPayableTotal = subtotal; // Start with the subtotal.
   let spendDiscountApplied = false;
   if (spendAndDiscountDeals.length > 0) {
     const bestDeal = spendAndDiscountDeals
       .filter(deal => subtotal >= deal.threshold)
-      .sort((a, b) => a.discount - b.discount)[0];
+      .sort((a, b) => a.discount - b.discount)[0]; 
 
     if (bestDeal) {
-      const discountValue = remainingItemsTotal * (1 - bestDeal.discount / 100);
-      totalDiscount += discountValue;
-      if (!appliedPromotions.find(p => p.id === bestDeal.id)) {
-          appliedPromotions.push(bestDeal);
-      }
+      const discountMultiplier = (100 - bestDeal.discount) / 100;
+      finalPayableTotal = subtotal * discountMultiplier;
       spendDiscountApplied = true;
+      if (!appliedPromotions.find(p => p.id === bestDeal.id)) {
+        appliedPromotions.push(bestDeal);
+      }
     }
   }
 
+  // Calculate the total discount amount for record-keeping.
+  const totalDiscount = subtotal - finalPayableTotal;
+
+  // Tier 4: Handle gift promotions.
   let giftApplied = false;
   if (spendAndGetDeals.length > 0) {
-    const applicableGift = spendAndGetDeals
-      .filter(deal => subtotal >= deal.threshold)
-      .sort((a, b) => b.threshold - a.threshold)[0];
-
+    const applicableGift = spendAndGetDeals.filter(deal => subtotal >= deal.threshold).sort((a, b) => b.threshold - a.threshold)[0];
     if (applicableGift) {
       gifts.push(applicableGift.giftName);
+      giftApplied = true;
       if (!appliedPromotions.find(p => p.id === applicableGift.id)) {
           appliedPromotions.push(applicableGift);
       }
-      giftApplied = true;
     }
   }
 
+  // Tier 5: Generate hints for the user.
   if (!spendDiscountApplied && spendAndDiscountDeals.length > 0) {
-    const nextDiscountDeal = spendAndDiscountDeals
-      .filter(deal => subtotal < deal.threshold)
-      .sort((a, b) => a.threshold - b.threshold)[0];
+    const nextDiscountDeal = spendAndDiscountDeals.filter(deal => subtotal < deal.threshold).sort((a, b) => a.threshold - b.threshold)[0];
     if (nextDiscountDeal) {
-      const difference = nextDiscountDeal.threshold - subtotal;
-      const hint = `再消費 NT$${difference} 即可享有「滿${nextDiscountDeal.threshold}元${nextDiscountDeal.discount / 10}折」優惠！`;
-      promotionHints.push(hint);
+      promotionHints.push(`再消費 NT$${Math.ceil(nextDiscountDeal.threshold - subtotal)} 即可享有「滿${nextDiscountDeal.threshold}元${nextDiscountDeal.discount / 10}折」！`);
     }
   }
-
   if (!giftApplied && spendAndGetDeals.length > 0) {
-    const nextGiftDeal = spendAndGetDeals
-      .filter(deal => subtotal < deal.threshold)
-      .sort((a, b) => a.threshold - b.threshold)[0];
+    const nextGiftDeal = spendAndGetDeals.filter(deal => subtotal < deal.threshold).sort((a, b) => a.threshold - b.threshold)[0];
     if (nextGiftDeal) {
-      const difference = nextGiftDeal.threshold - subtotal;
-      const hint = `再消費 NT$${difference} 即可獲得「${nextGiftDeal.giftName}」！`;
-      promotionHints.push(hint);
+      promotionHints.push(`再消費 NT$${Math.ceil(nextGiftDeal.threshold - subtotal)} 即可獲得「${nextGiftDeal.giftName}」！`);
     }
   }
 
-  const total = subtotal - totalDiscount;
-
+  // Return the definitive, correct values.
   return {
-    items: cart.value,
+    items: processedCartItems,
     subtotal: Math.round(subtotal),
-    total: Math.round(total),
-    discount: Math.round(totalDiscount),
+    total: Math.round(finalPayableTotal),      // ABSOLUTELY a.k.a the final payable amount.
+    discount: Math.round(totalDiscount),      // The total amount saved.
     appliedPromotions,
     gifts,
     promotionHints,
   };
 });
+
 
 const addToCart = (item: MenuItem) => {
   if (item.isSetMeal) {
@@ -302,15 +280,29 @@ const processOrder = (paymentMethod: 'cash' | 'linepay') => {
     });
   });
 
+  const finalAppliedPromotions = appliedPromotions.map(p => {
+      let name = p.name;
+      let amount = 0;
+      if (p.type === 'SPEND_AND_DISCOUNT') {
+          name = `滿${p.threshold}享${p.discount/10}折`;
+          // The amount for this specific promo is the total discount.
+          amount = discount;
+      } else if (p.type === 'SINGLE_ITEM_DEAL') {
+          const itemInCart = items.find(i => i.id === p.items[0].itemId);
+          if(itemInCart){
+            const singleItemDiscount = (itemInCart.originalPrice - itemInCart.price) * itemInCart.quantity;
+            amount = singleItemDiscount;
+          }
+      }
+      return { name, amount };
+  });
+
   const orderPayload = {
     items: finalCartItems,
     subtotal,
     discount,
     total,
-    appliedPromotions: appliedPromotions.map(p => ({ 
-      name: p.type === 'SPEND_AND_DISCOUNT' ? `滿${p.threshold}享${p.discount/10}折` : p.name,
-      amount: 0 
-    })),
+    appliedPromotions: finalAppliedPromotions,
     paymentMethod: paymentMethod,
     tableNumber: selectedTable.value ? selectedTable.value.name : undefined
   };
