@@ -39,6 +39,7 @@ const modalMode = ref('add');
 const defaultReservation = () => ({
   id: null,
   name: '',
+  phone: '',
   date: selectedDate.value.format('YYYY-MM-DD'),
   time: dayjs().format('HH:mm'),
   guests: 1,

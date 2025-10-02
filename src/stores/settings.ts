@@ -3,7 +3,7 @@ import { ref, watch } from 'vue';
 
 // 1. localStorage 的鍵與預設值
 const NOTES_STORAGE_KEY = 'caffe_pos_receipt_notes';
-const DEFAULT_NOTES = '感謝您的光臨，歡迎再次惠顧！\n*** 發票為電子發票，請至財政部網站查詢 ***';
+const DEFAULT_NOTES = '《向天湖咖啡民宿感謝您的光臨》'; // [MODIFIED]
 
 export const useSettingsStore = defineStore('settings', () => {
   // 2. 從 localStorage 初始化 State，若無則使用預設值

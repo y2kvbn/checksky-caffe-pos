@@ -1,6 +1,9 @@
 <template>
   <div class="number-spinner">
-    <label class="spinner-label">{{ label }}</label>
+    <label class="spinner-label">
+      <i v-if="icon" :class="icon"></i>
+      {{ label }}
+    </label>
     <div 
       class="spinner-control"
       @mousedown="handleMouseDown"
@@ -32,6 +35,7 @@ const props = defineProps<{
   min: number;
   max: number;
   label: string;
+  icon?: string; // [NEW] Optional icon prop
 }>();
 
 const emit = defineEmits(['update:modelValue']);
@@ -56,6 +60,7 @@ const reelStyle = computed(() => ({
   transition: isDragging.value ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
 }));
 
+// Mouse and Touch handlers (no changes needed here)
 const handleMouseDown = (event: MouseEvent) => {
   isDragging.value = true;
   startY.value = event.clientY;
@@ -69,7 +74,6 @@ const handleMouseMove = (event: MouseEvent) => {
   const valueChange = -Math.round(deltaY / numberHeight); // Invert direction
   
   let newValue = startValue.value + valueChange;
-  // Clamp the value within min/max
   newValue = Math.max(props.min, Math.min(props.max, newValue));
 
   if (newValue !== props.modelValue) {
@@ -94,9 +98,7 @@ const handleTouchMove = (event: TouchEvent) => {
   const valueChange = -Math.round(deltaY / numberHeight); // Invert direction
 
   let newValue = startValue.value + valueChange;
-  // Clamp the value within min/max, with looping
   const range = props.max - props.min + 1;
-  newValue = startValue.value + valueChange;
   let unboundedValue = (newValue - props.min) % range;
   if (unboundedValue < 0) {
     unboundedValue += range;
@@ -111,10 +113,12 @@ const handleTouchMove = (event: TouchEvent) => {
 const handleTouchEnd = () => {
   isDragging.value = false;
 };
-
 </script>
 
 <style scoped>
+/* [NEW] Import Font Awesome */
+@import 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
+
 .number-spinner {
   display: flex;
   flex-direction: column;
@@ -124,6 +128,9 @@ const handleTouchEnd = () => {
 }
 
 .spinner-label {
+  display: flex; /* [NEW] */
+  align-items: center; /* [NEW] */
+  gap: 8px; /* [NEW] */
   font-weight: 500;
   color: #333;
   margin-bottom: 12px;
@@ -134,23 +141,22 @@ const handleTouchEnd = () => {
   background-color: #f7f8fa;
   border-radius: 10px;
   width: 120px;
-  height: 90px; /* Increased height to show context */
+  height: 90px; 
   border: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: ns-resize; /* Vertical resize cursor */
-  touch-action: none; /* Prevents page scroll on touch devices */
+  cursor: ns-resize;
+  touch-action: none;
 }
 
 .spinner-window {
-  height: 30px; /* Height for one number */
+  height: 30px;
   overflow: hidden;
   width: 100%;
   position: relative;
 }
 
-/* Add a pseudo-element to indicate the selected line */
 .spinner-window::before {
     content: '';
     position: absolute;
@@ -164,7 +170,6 @@ const handleTouchEnd = () => {
 }
 
 .spinner-reel {
-  /* Transition is now handled in script */
   position: relative;
   z-index: 1;
 }

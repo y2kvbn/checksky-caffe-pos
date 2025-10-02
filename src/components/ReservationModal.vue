@@ -3,25 +3,31 @@
     <div class="modal-content">
       <h3 class="modal-title">{{ modalMode === 'add' ? '新增' : '編輯' }}訂位</h3>
       <form @submit.prevent="handleSubmit">
-        <div class="form-group">
-          <label for="name">訂位姓名:</label>
-          <input type="text" id="name" v-model="currentReservation.name" required>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="name">訂位姓名:</label>
+            <input type="text" id="name" v-model="currentReservation.name" required>
+          </div>
+          <div class="form-group">
+            <label for="phone">連絡電話:</label>
+            <input type="text" id="phone" v-model="currentReservation.phone">
+          </div>
         </div>
         <div class="form-grid">
           <div class="form-group">
             <label for="date">訂位日期:</label>
-            <input type="date" id="date" v-model="currentReservation.date" required>
+            <CustomDatePicker v-model="currentReservation.date" />
           </div>
           <div class="form-group">
             <label for="time">訂位時間:</label>
-            <input type="time" id="time" v-model="currentReservation.time" required>
+            <CustomTimePicker v-model="currentReservation.time" />
           </div>
         </div>
 
-        <!-- [NEW] Spinner Container -->
+        <!-- [MODIFIED] Spinner Container -->
         <div class="spinner-container form-group">
-          <NumberSpinner label="訂位人數" v-model="currentReservation.guests" :min="1" :max="50" />
-          <NumberSpinner label="嬰兒座椅" v-model="currentReservation.babyChairs" :min="0" :max="10" />
+          <NumberSpinner label="訂位人數" v-model="currentReservation.guests" :min="1" :max="50" icon="fas fa-users" />
+          <NumberSpinner label="嬰兒座椅" v-model="currentReservation.babyChairs" :min="0" :max="10" icon="fas fa-child" />
         </div>
 
         <div class="form-group">
@@ -48,7 +54,9 @@
 import { ref, watch, toRefs } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useTablesStore } from '../stores/tables';
-import NumberSpinner from './NumberSpinner.vue'; // [NEW] Import the spinner component
+import NumberSpinner from './NumberSpinner.vue';
+import CustomDatePicker from './CustomDatePicker.vue';
+import CustomTimePicker from './CustomTimePicker.vue';
 
 const props = defineProps<{ 
   isModalVisible: boolean, 
@@ -64,7 +72,6 @@ const { tables } = storeToRefs(tablesStore);
 const currentReservation = ref({ guests: 1, babyChairs: 0, ...props.reservationData });
 
 watch(reservationData, (newVal) => {
-  // Ensure defaults are set if not present
   currentReservation.value = {
     guests: 1,
     babyChairs: 0,
@@ -89,7 +96,6 @@ const emit = defineEmits(['closeModal', 'submit']);
 .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
 .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(142, 68, 173, 0.1); }
 
-/* [NEW] Spinner Container Styles */
 .spinner-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
