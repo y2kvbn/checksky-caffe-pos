@@ -18,7 +18,7 @@
       <input 
         type="password" 
         v-model="password" 
-        placeholder="密碼 (任意)" 
+        placeholder="密碼 (預設: 1234)" 
         required
         class="input-field"
       >
@@ -50,16 +50,16 @@ const emit = defineEmits(['login-success', 'showForgotPassword']);
 const authStore = useAuthStore();
 
 const username = ref('checksky');
-const password = ref('202409');
+const password = ref('1234');
 const error = ref<string | null>(null);
 
 const handleLogin = () => {
-  // Simple validation for demonstration
-  if (username.value && password.value) {
+  if (username.value === 'checksky' && password.value === '1234') {
     authStore.login({ username: username.value });
     emit('login-success');
+    error.value = null; // Clear error on successful login
   } else {
-    error.value = '請輸入帳號和密碼。';
+    error.value = '帳號或密碼錯誤，請重新輸入。';
   }
 };
 </script>
